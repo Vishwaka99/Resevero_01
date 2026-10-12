@@ -83,9 +83,9 @@ These are *profiles*. Since sign-in moved to Supabase Auth, each also needs an
 
 - On the `postgres` adapter, `npm run db:seed` creates every identity, confirms
   it and sets the password above. Nothing to do.
-- On the `memory` adapter there is no seeder to run, so create the two accounts
-  once in the dashboard — Authentication → Users → Add user, with **Auto
-  Confirm User** on — using the same emails and password.
+- On the `memory` adapter, run `npm run auth:seed`. It creates the identities
+  and nothing else, which is the piece `db:seed` cannot do without a database.
+  It needs `SUPABASE_SERVICE_ROLE_KEY`, and it is idempotent.
 
 The profile and the identity are joined on email at first sign-in, and the link
 is stored in `users.auth_user_id` from then on.
@@ -118,6 +118,7 @@ npm test          # 34 tests covering the booking rules
 npm run typecheck # tsc --noEmit
 npm run lint
 npm run build
+npm run auth:seed # create the demo accounts' Supabase identities
 
 npm run db:migrate  # apply supabase/migrations to the database
 npm run db:seed     # load the demo data into it
