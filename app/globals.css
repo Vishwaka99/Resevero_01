@@ -1,0 +1,220 @@
+@import "../styles/tokens.css";
+@import "../styles/components.css";
+
+/* ------------------------------------------------------------------ *
+ * App shell — sidebar + top bar, per the Reservo layout rules:
+ * 248px sidebar, 64px top bar, 1280px content column.
+ * < 1200px the sidebar becomes a 72px icon rail.
+ * < 768px it becomes a bottom tab bar and controls grow to 48px.
+ * ------------------------------------------------------------------ */
+
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html,
+body { padding: 0; margin: 0; }
+
+body {
+  font-family: var(--font-sans);
+  background: var(--canvas);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 22px;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--primary); }
+a:hover { color: var(--primary-hover); }
+
+.rv-shell { display: flex; min-height: 100vh; background: var(--canvas); }
+.rv-shell-main { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; }
+
+.rv-topbar {
+  height: var(--topbar-height);
+  padding: 0 var(--space-6);
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+.rv-topbar-search { flex: 1 1 auto; max-width: 440px; }
+.rv-topbar-end { margin-left: auto; display: flex; align-items: center; gap: var(--space-3); }
+
+.rv-page {
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  max-width: 1280px;
+  width: 100%;
+}
+.rv-page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+.rv-page-title { margin: 0; font: 700 24px/32px var(--font-sans); letter-spacing: -0.01em; }
+.rv-page-sub { margin: 4px 0 0; color: var(--ink-muted); font-size: 14px; max-width: 70ch; }
+.rv-page-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+
+.rv-grid { display: grid; gap: var(--space-6); }
+.rv-grid-auto { grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); }
+.rv-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.rv-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.rv-grid-sidebar { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); align-items: start; }
+.rv-grid-book { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); align-items: start; }
+.rv-stack { display: flex; flex-direction: column; gap: var(--space-4); }
+.rv-stack-sm { display: flex; flex-direction: column; gap: var(--space-2); }
+.rv-inline { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.rv-spacer { margin-left: auto; }
+.rv-mono { font-family: var(--font-mono); font-weight: 500; }
+.rv-muted { color: var(--ink-muted); }
+.rv-sr {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* Sidebar: the active item is decided by the router, not by markup */
+.rv-side { position: sticky; top: 0; height: 100vh; overflow-y: auto; flex: none; }
+.rv-side-rail-label { display: inline; }
+
+/* Bottom tab bar, phones only */
+.rv-tabbar { display: none; }
+
+/* Filter bar used by Schedule, Browse resources and My reservations */
+.rv-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+.rv-select {
+  height: var(--control-height);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--ink);
+  font: 500 13px/18px var(--font-sans);
+  cursor: pointer;
+}
+.rv-segmented { display: flex; gap: var(--space-1); padding: 4px; background: var(--surface-sunken); border-radius: var(--radius-md); width: max-content; }
+.rv-segmented a,
+.rv-segmented button {
+  padding: 6px var(--space-3); border: 0; border-radius: 8px; background: transparent;
+  font: 600 13px/18px var(--font-sans); color: var(--ink-muted); text-decoration: none; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.rv-segmented [aria-current="true"],
+.rv-segmented [aria-current="page"],
+.rv-segmented [aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-card); }
+
+/* Resource cards on Browse */
+.rv-res-card { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-5); }
+.rv-daybar { display: flex; gap: 2px; height: 10px; }
+.rv-daybar i { flex: 1; border-radius: 2px; background: var(--surface-sunken); }
+.rv-daybar i[data-state="busy"] { background: var(--slot-busy); }
+.rv-daybar i[data-state="mine"] { background: var(--primary); }
+.rv-daybar i[data-state="pending"] { background: var(--warning); }
+.rv-daybar i[data-state="blocked"] { background: var(--slot-blocked); }
+.rv-daybar-scale { display: flex; justify-content: space-between; font: 500 11px/16px var(--font-mono); color: var(--ink-muted); }
+.rv-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.rv-tag {
+  padding: 2px 10px; border-radius: var(--radius-pill); background: var(--surface-sunken);
+  font: 500 12px/18px var(--font-sans); color: var(--ink-muted);
+}
+
+/* Drawer / side panel used on Schedule, Approvals and Manage resources */
+.rv-drawer {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-pop);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.rv-dl { display: grid; grid-template-columns: auto 1fr; gap: var(--space-2) var(--space-4); margin: 0; font-size: 13px; }
+.rv-dl dt { color: var(--ink-muted); }
+.rv-dl dd { margin: 0; }
+
+/* Reports */
+.rv-bar-row { display: grid; grid-template-columns: 180px 1fr 52px; align-items: center; gap: var(--space-3); font-size: 13px; }
+.rv-bar { height: 10px; border-radius: var(--radius-pill); background: var(--chart-track); overflow: hidden; }
+.rv-bar > i { display: block; height: 100%; border-radius: var(--radius-pill); background: var(--chart-1); }
+.rv-heat { display: grid; gap: 4px; }
+.rv-heat-row { display: grid; grid-template-columns: 52px repeat(var(--cols, 10), minmax(0, 1fr)); gap: 4px; align-items: center; }
+.rv-heat-cell { height: 28px; border-radius: var(--radius-sm); background: var(--chart-track); }
+.rv-heat-label { font: 500 11px/16px var(--font-mono); color: var(--ink-muted); }
+
+@media (max-width: 1200px) {
+  .rv-side { width: 72px; padding: var(--space-4) var(--space-2); }
+  .rv-side-section { display: none; }
+  .rv-side .rv-nav { justify-content: center; padding: 10px 0; position: relative; }
+  .rv-side-rail-label { display: none; }
+  .rv-side .rv-nav-count { position: absolute; margin: 0; transform: translate(14px, -12px); }
+  .rv-side-brand { justify-content: center; }
+  .rv-side-brand .rv-logo-word { display: none; }
+  .rv-grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rv-grid-sidebar,
+  .rv-grid-book { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 768px) {
+  .rv-side { display: none; }
+  .rv-page { padding: var(--space-4); gap: var(--space-4); padding-bottom: 88px; }
+  .rv-topbar { padding: 0 var(--space-4); }
+  .rv-grid-2,
+  .rv-grid-3 { grid-template-columns: minmax(0, 1fr); }
+  .rv-btn { height: 48px; }
+  .rv-btn-sm { height: 36px; }
+  .rv-bar-row { grid-template-columns: 120px 1fr 44px; }
+  .rv-tabbar {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 30;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+  }
+  .rv-tabbar a {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 0;
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    color: var(--ink-muted);
+    font: 600 11px/14px var(--font-sans);
+  }
+  .rv-tabbar a[aria-current="page"] { color: var(--primary-ink); background: var(--primary-soft); }
+
+  /* On a phone the avatar is the initials alone; the name would crowd the search. */
+  .rv-topbar .rv-person-name,
+  .rv-topbar .rv-person-sub { display: none; }
+  .rv-topbar-end { gap: var(--space-2); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
