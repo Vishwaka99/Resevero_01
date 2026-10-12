@@ -129,6 +129,10 @@ const users: UserRepository = {
     const found = state().tables.users.find((u) => u.email.toLowerCase() === needle);
     return found ? clone(found) : null;
   },
+  async findByAuthUserId(authUserId) {
+    const found = state().tables.users.find((u) => u.authUserId === authUserId);
+    return found ? clone(found) : null;
+  },
   async list() {
     return state().tables.users.map(clone).sort((a, b) => a.name.localeCompare(b.name));
   },

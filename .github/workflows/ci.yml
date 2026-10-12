@@ -1,0 +1,78 @@
+name: CI
+
+# Runs on every push to any branch, so a branch is verified as soon as it is
+# pushed — before it is merged, and whether or not a pull request exists yet.
+#
+# Deliberately push-only. A pull_request trigger would either duplicate every
+# run, or, if guarded to skip same-repo pull requests, leave a "skipped" check
+# on the commit — and GitHub counts a skipped check as satisfying a required
+# one, so the merge gate could pass without the code ever being verified.
+# A fork pull request therefore reports no checks and stays blocked, which
+# fails closed and is the safe direction for a gate.
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+
+# A new push to the same branch supersedes the run already in flight.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Services talk to repository ports, so the in-memory adapter exercises the
+  # same code paths without a database. CI stays hermetic and needs no secrets.
+  DATA_ADAPTER: memory
+
+jobs:
+  verify:
+    name: Typecheck, lint and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+  build:
+    name: Production build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      # Lets Next reuse compilation output across runs on the same lockfile.
+      - name: Restore Next build cache
+        uses: actions/cache@v6
+        with:
+          path: .next/cache
+          key: next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('app/**', 'components/**', 'lib/**', 'styles/**', 'utils/**') }}
+          restore-keys: |
+            next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+
+      - name: Build
+        run: npm run build
