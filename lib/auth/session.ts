@@ -185,6 +185,13 @@ export async function signUp(input: { name: string; email: string; password: str
   }
   if (!data.user) return { ok: false, message: "Could not create that account. Try again." };
 
+  // When confirmations are on, Supabase will not admit that an address is
+  // taken: it answers with a decoy user — a random id and an empty
+  // `identities` array — and sends no email. Taking that id at face value
+  // would bind a profile to an identity that does not exist, and the real
+  // owner could never sign in again, so stop here instead.
+  if (data.user.identities?.length === 0) return { ok: true };
+
   // A project with email confirmation switched off hands back a live session.
   // The account is not approved, so that session is thrown away rather than
   // leaving someone half signed in.

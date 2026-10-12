@@ -96,7 +96,8 @@ export async function signUpAction(_previous: ActionState, form: FormData): Prom
   // Deliberately the same message whether or not the address was already
   // known, so the form cannot be used to discover who has an account.
   return successState(
-    "Check your email for a confirmation link. An admin enables new accounts, so sign-in will work once yours is approved.",
+    "If that address is new, a confirmation link is on its way to it. New accounts also need an admin to enable them, " +
+      "so sign in once yours has been approved.",
   );
 }
 

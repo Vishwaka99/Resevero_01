@@ -6,7 +6,7 @@
 import { getDataStore } from "@/lib/data";
 import type { AuthUser } from "@/lib/auth/session";
 import type { Role, User } from "@/lib/domain/types";
-import { createAdminClient } from "@/utils/supabase/admin";
+import { createAdminClient, findIdentityByEmail } from "@/utils/supabase/admin";
 import { notFound, ruleViolation } from "./errors";
 
 export type UserRow = {
@@ -65,10 +65,36 @@ export async function inviteUser(actor: AuthUser, input: InviteInput): Promise<U
     email_confirm: true,
   });
 
-  if (created.error || !created.data.user) {
-    throw ruleViolation(created.error?.message ?? "Could not create that sign-in.");
+  let authUserId: string;
+  // Whether this call created the identity decides whether a later failure may
+  // delete it. Adopting someone's existing sign-in and then removing it
+  // because an insert failed would be far worse than leaving it behind.
+  let identityIsOurs = true;
+
+  if (created.error) {
+    // An identity can outlive its profile: a self-registration whose profile
+    // was lost with the in-memory store, or a profile deleted by hand. Without
+    // this the address is stuck — sign-up refuses it as taken, and an invite
+    // refuses it as already registered.
+    const existing = /already (registered|exists)/i.test(created.error.message)
+      ? await findIdentityByEmail(admin, email)
+      : null;
+
+    if (!existing) throw ruleViolation(created.error.message);
+
+    const reset = await admin.auth.admin.updateUserById(existing, {
+      password: input.temporaryPassword,
+      email_confirm: true,
+    });
+    if (reset.error) throw ruleViolation(reset.error.message);
+
+    authUserId = existing;
+    identityIsOurs = false;
+  } else if (!created.data.user) {
+    throw ruleViolation("Could not create that sign-in.");
+  } else {
+    authUserId = created.data.user.id;
   }
-  const authUserId = created.data.user.id;
 
   try {
     return await store.runInTransaction(async () => {
@@ -92,9 +118,10 @@ export async function inviteUser(actor: AuthUser, input: InviteInput): Promise<U
       return user;
     });
   } catch (error) {
-    // Roll the identity back, so a retry is not blocked by "already
-    // registered" for an account that has no profile.
-    await admin.auth.admin.deleteUser(authUserId).catch(() => {});
+    // Roll back only an identity this call made, so a retry is not blocked by
+    // "already registered" for an account that has no profile. An adopted one
+    // belonged to someone before this invite and is left alone.
+    if (identityIsOurs) await admin.auth.admin.deleteUser(authUserId).catch(() => {});
     throw error;
   }
 }

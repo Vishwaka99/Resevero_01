@@ -30,3 +30,20 @@ export function createAdminClient() {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 }
+
+/**
+ * The id of the Supabase identity using this address, or null.
+ *
+ * The Admin API has no lookup by email, so this pages through the list. Call
+ * it only when something has already gone wrong — an address that was supposed
+ * to be free turning out not to be — rather than on every write.
+ */
+export async function findIdentityByEmail(
+  admin: ReturnType<typeof createAdminClient>,
+  email: string,
+): Promise<string | null> {
+  const needle = email.trim().toLowerCase();
+  const { data, error } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+  if (error) throw error;
+  return data.users.find((user) => user.email?.toLowerCase() === needle)?.id ?? null;
+}

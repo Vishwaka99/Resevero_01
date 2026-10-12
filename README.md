@@ -103,9 +103,30 @@ verifies the token, discards the session it creates (the account is not
 approved yet, and a valid token for an account the app refuses is a confusing
 state to leave someone in) and returns to sign-in with a note.
 
-For the link to arrive at the right host, add `<your origin>/auth/confirm` to
-**Authentication → URL Configuration → Redirect URLs** in Supabase. Without it
-Supabase falls back to the project's Site URL.
+#### Where the confirmation email goes
+
+Supabase sends it, to the address that was registered. Two settings decide
+whether it arrives and whether the link works, and both are easy to miss:
+
+1. **Who may receive it.** Supabase's built-in email service only delivers to
+   members of your Supabase organisation, and allows a couple of messages an
+   hour. Registering a personal address on a fresh project therefore looks like
+   nothing happening: the identity appears in **Authentication → Users** with
+   *Confirmed* unticked, and no mail is ever sent. Configure **Project Settings
+   → Authentication → SMTP** with a real provider before expecting delivery to
+   anyone outside the team. For local work it is usually quicker to skip email
+   entirely and use `npm run auth:seed`, which creates confirmed accounts
+   directly.
+
+2. **Where the link points.** Add `<your origin>/auth/confirm` to
+   **Authentication → URL Configuration → Redirect URLs**. Without it Supabase
+   ignores the `emailRedirectTo` this app sends and falls back to the project's
+   Site URL, so the link lands somewhere that cannot read the token.
+
+An identity whose email was never confirmed cannot sign in with a password. To
+clear one out and start again, delete it under **Authentication → Users**, or
+have an admin invite the address — an invite adopts an identity that already
+exists rather than refusing it.
 
 The form answers the same way whether or not the address is already known —
 same wording, and an address that already has a profile is left untouched — so
