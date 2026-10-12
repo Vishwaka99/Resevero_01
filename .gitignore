@@ -42,5 +42,11 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Claude Code workspace settings
+# Claude Code and other agent tooling
 .claude/
+.claude.json
+.claude.json.backup
+CLAUDE.md
+CLAUDE.local.md
+AGENTS.md
+.mcp.json
