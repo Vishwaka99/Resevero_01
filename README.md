@@ -51,14 +51,21 @@ Requires Node 20.9+ (developed on Node 24).
 ```bash
 npm install
 cp .env.example .env.local
+# Fill in the three Supabase values in .env.local before signing in — see below.
 npm run dev
 ```
 
-Open <http://localhost:3000>. That runs on the in-memory adapter and needs no
-database. The seed is built relative to today, so the dashboard, schedule and
-approvals queue always have live-looking data.
+Open <http://localhost:3000>. The in-memory adapter serves all the *data* with
+no database, and the seed is built relative to today, so the dashboard,
+schedule and approvals queue always have live-looking data.
 
-To run against Supabase instead, see [Running on
+**Sign-in is not local, though.** It goes through Supabase Auth, so
+`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` and
+`SUPABASE_SERVICE_ROLE_KEY` are needed even on the memory adapter. This is the
+price of moving auth to Supabase: the project no longer runs end to end with
+zero configuration.
+
+To run the data against Supabase too, see [Running on
 Supabase](#running-on-supabase).
 
 ### Signing in
@@ -70,6 +77,18 @@ Supabase](#running-on-supabase).
 
 Both are pre-filled on the sign-in form. Other seeded people —
 `nimal@`, `kavindi@`, `kasun@`, `ruwan@reservo.test` — share the password.
+
+These are *profiles*. Since sign-in moved to Supabase Auth, each also needs an
+**identity** in your Supabase project before it can be used:
+
+- On the `postgres` adapter, `npm run db:seed` creates every identity, confirms
+  it and sets the password above. Nothing to do.
+- On the `memory` adapter there is no seeder to run, so create the two accounts
+  once in the dashboard — Authentication → Users → Add user, with **Auto
+  Confirm User** on — using the same emails and password.
+
+The profile and the identity are joined on email at first sign-in, and the link
+is stored in `users.auth_user_id` from then on.
 
 ### Other commands
 
@@ -258,8 +277,9 @@ catalogue, maintenance blocks, users and reports.
 
 Enforcement is in three places and only one of them matters:
 
-- `proxy.ts` redirects a request with no session cookie. It is a convenience —
-  it only looks for the cookie's presence.
+- `proxy.ts` refreshes the Supabase session and redirects a request that has
+  none. The redirect is a convenience: Next's own docs warn that a matcher
+  change can silently remove proxy coverage, so nothing trusts it.
 - The sidebar is built from the role, so a member never receives admin links,
   and `app/(app)/admin/layout.tsx` sends them to an explanation if they follow
   a stale one.
@@ -272,15 +292,31 @@ token, so changing someone's role takes effect immediately.
 
 ### Authentication
 
-A signed, HTTP-only, SameSite=Lax cookie holding a user id and an expiry,
-verified with an HMAC (`lib/auth/session.ts`). Passwords are scrypt hashes from
-the Node standard library (`lib/auth/password.ts`).
+Supabase Auth holds the credential and the tokens. `signInWithPassword` issues
+them, `@supabase/ssr` keeps them in cookies, and `proxy.ts` rotates them —
+a server component cannot write a cookie, so something that can has to.
 
-The design's architecture board suggested Auth.js. I wrote the ~120 lines
-instead: the app needs email-and-password against its own user table and
-nothing else, and a reviewer can read the whole mechanism in one sitting. If
-SSO is ever wanted, Auth.js is the right answer and `getSession()` is the only
-function that would change.
+What Supabase does *not* hold is the role. A signed-in request resolves in two
+steps: Supabase says which identity is calling, and this application's `users`
+table says what that identity may do. That is why a demotion is immediate
+rather than waiting for an access token to expire.
+
+The two are joined by `users.auth_user_id` (migration `0002`). A profile
+created before its identity — an invited colleague, a freshly seeded database —
+is matched on email at first sign-in and the link is written then. A profile
+already bound to a different identity is refused rather than matched, so
+registering a second account with someone's address cannot borrow their role.
+An identity with no profile is refused too, and its session discarded.
+
+`getSession()` calls `auth.getUser()`, which revalidates the token with
+Supabase instead of trusting the cookie. That is a network call per request:
+`auth.getClaims()` verifies locally against the project's JWKS and would remove
+it, which is the first thing to reach for if this shows up in latency.
+
+Creating an account needs the service-role key, so `inviteUser` goes through
+`utils/supabase/admin.ts`. It creates the identity before the profile: an
+unused identity is recoverable, whereas a profile that can never sign in looks
+like a working user.
 
 ---
 
@@ -332,10 +368,10 @@ lib/
     postgres/             Supabase adapter: connection, transactions, queries
   server/                 domain services — the rules live here
   bff/                    view models, server actions, Zod schemas
-  auth/                   session, password hashing
+  auth/                   session: Supabase identity -> app profile + role
 supabase/migrations/      the schema, as runnable SQL
 scripts/                  db:migrate and db:seed
-utils/supabase/           Supabase SDK clients (unused by the data path)
+utils/supabase/           Supabase clients: browser, server, and service-role
 tests/                    the booking rules
 docs/erd.md               the schema, explained
 ```
@@ -433,12 +469,15 @@ workaround.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `SESSION_SECRET` | a dev value | Signs the session cookie. Set a real one in production. |
 | `ORG_TIME_ZONE` | `Asia/Colombo` | The timezone times are displayed in. |
-| `DATA_ADAPTER` | `memory` | `memory` or `postgres`. |
+| `DATA_ADAPTER` | `memory` | `memory` or `postgres`. Chooses the data path only — sign-in uses Supabase Auth either way. |
 | `DATABASE_URL` | — | Pooled Supabase connection string. Required by the `postgres` adapter, by `db:migrate` and by `db:seed`. |
-| `NEXT_PUBLIC_SUPABASE_URL` | — | Supabase project URL. Only needed if Auth, Storage or Realtime are adopted. |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | — | Public key, safe in the browser. RLS denies it everything. |
+| `NEXT_PUBLIC_SUPABASE_URL` | — | Supabase project URL. **Required** — sign-in goes through Supabase Auth. |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | — | Public key, safe in the browser. RLS denies it everything. **Required** for sign-in. |
+| `SUPABASE_SERVICE_ROLE_KEY` | — | Service-role key. Needed to create an invited user's sign-in and to run `db:seed`. Bypasses RLS — never expose it to the browser. |
+
+`SESSION_SECRET` is gone: there is no longer an application-signed cookie to
+sign. Supabase issues and verifies the tokens.
 
 `.env.example` has the shape of each; real values go in `.env.local`, which is
 not committed.

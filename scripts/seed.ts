@@ -17,6 +17,7 @@ import { createHash } from "node:crypto";
 
 import { buildSeed, DEV_PASSWORD } from "../lib/data/memory/seed";
 import { connect, databaseUrl } from "../lib/data/postgres/client";
+import { createAdminClient } from "../utils/supabase/admin";
 
 const force = process.argv.includes("--force");
 
@@ -45,6 +46,45 @@ function uuid(slug: string | null): string | null {
   return value;
 }
 
+/**
+ * Gives every seeded profile a Supabase identity and returns the ids, keyed by
+ * email.
+ *
+ * Truncating `users` does not touch `auth.users`, so re-seeding meets the
+ * identities it made last time. Those are reused and their password is reset
+ * to DEV_PASSWORD, which keeps re-seeding repeatable without orphaning the
+ * accounts people are already signed in to.
+ */
+async function syncAuthIdentities(emails: string[]): Promise<Map<string, string>> {
+  const admin = createAdminClient();
+  const byEmail = new Map<string, string>();
+
+  // One page is plenty for a demo seed, and asking for more than Supabase
+  // allows is an error rather than a truncation.
+  const existing = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+  if (existing.error) throw existing.error;
+  for (const user of existing.data.users) {
+    if (user.email) byEmail.set(user.email.toLowerCase(), user.id);
+  }
+
+  for (const email of emails) {
+    const key = email.toLowerCase();
+    const found = byEmail.get(key);
+
+    if (found) {
+      const reset = await admin.auth.admin.updateUserById(found, { password: DEV_PASSWORD, email_confirm: true });
+      if (reset.error) throw reset.error;
+      continue;
+    }
+
+    const created = await admin.auth.admin.createUser({ email: key, password: DEV_PASSWORD, email_confirm: true });
+    if (created.error || !created.data.user) throw created.error ?? new Error(`Could not create an identity for ${email}`);
+    byEmail.set(key, created.data.user.id);
+  }
+
+  return byEmail;
+}
+
 async function main() {
   const url = databaseUrl();
   if (/prod/i.test(url) && !force) {
@@ -52,6 +92,13 @@ async function main() {
   }
 
   const seed = buildSeed();
+
+  // Outside the transaction on purpose: these are HTTP calls to Supabase, and
+  // holding a Postgres transaction open across them would be a long lock for
+  // no benefit. If this throws, nothing has been truncated yet.
+  const authIds = await syncAuthIdentities(seed.users.map((row) => row.email));
+  console.log(`Synced ${authIds.size} Supabase identities, password "${DEV_PASSWORD}".`);
+
   const sql = connect(url, { max: 1 });
 
   try {
@@ -68,9 +115,10 @@ async function main() {
       }
 
       for (const row of seed.users) {
+        const authUserId = authIds.get(row.email.toLowerCase()) ?? null;
         await tx`
-          insert into users (id, name, email, password_hash, role, department_id, is_active, created_at)
-          values (${uuid(row.id)}::uuid, ${row.name}, ${row.email}, ${row.passwordHash}, ${row.role},
+          insert into users (id, name, email, auth_user_id, role, department_id, is_active, created_at)
+          values (${uuid(row.id)}::uuid, ${row.name}, ${row.email}, ${authUserId}, ${row.role},
                   ${uuid(row.departmentId)}::uuid, ${row.isActive}, ${row.createdAt})
         `;
       }

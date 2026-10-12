@@ -1,46 +1,25 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 
 import { getDataStore } from "@/lib/data";
 import type { Role, User } from "@/lib/domain/types";
 import { forbidden, unauthenticated } from "@/lib/server/errors";
-import { SESSION_COOKIE } from "./cookie";
-import { verifyPassword } from "./password";
+import { createClient } from "@/utils/supabase/server";
 
 /**
- * Session handling: a signed, HTTP-only cookie holding the user id and an
- * expiry. It is deliberately small — the role is read from the database on
- * every request, so changing someone's role takes effect immediately instead of
- * living in a stale token.
+ * Session handling, on Supabase Auth.
+ *
+ * Supabase owns the credential and the tokens; the cookies it sets are read
+ * and refreshed through `@supabase/ssr`. What it does *not* own is the role:
+ * that is read from this application's `users` table on every request, so
+ * demoting or deactivating someone takes effect immediately instead of waiting
+ * for their access token to expire.
+ *
+ * So a signed-in request resolves in two steps: Supabase says which identity
+ * is calling, and the `users` table says what that identity may do.
  */
 
-const SESSION_DAYS = 7;
-
-function secret(): string {
-  return process.env.SESSION_SECRET ?? "reservo-dev-secret-change-me";
-}
-
-function sign(payload: string): string {
-  return createHmac("sha256", secret()).update(payload).digest("base64url");
-}
-
-function serialise(userId: string, expiresAt: number): string {
-  const payload = `${userId}.${expiresAt}`;
-  return `${payload}.${sign(payload)}`;
-}
-
-function parse(token: string): { userId: string; expiresAt: number } | null {
-  const parts = token.split(".");
-  if (parts.length !== 3) return null;
-
-  const [userId, expiresRaw, signature] = parts;
-  const expected = Buffer.from(sign(`${userId}.${expiresRaw}`));
-  const actual = Buffer.from(signature);
-  if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) return null;
-
-  const expiresAt = Number(expiresRaw);
-  if (!Number.isFinite(expiresAt) || expiresAt < Date.now()) return null;
-  return { userId, expiresAt };
+async function client() {
+  return createClient(await cookies());
 }
 
 export type AuthUser = {
@@ -64,17 +43,40 @@ async function toAuthUser(user: User): Promise<AuthUser> {
   };
 }
 
+/**
+ * The profile a Supabase identity maps to.
+ *
+ * Normally that is a straight lookup on the link column. The email fallback
+ * covers a profile created before the identity existed — an account invited by
+ * an admin, or a database seeded ahead of its auth users. It is read-only:
+ * writing the link is `signIn`'s job, so that rendering a page never writes.
+ *
+ * A profile already linked to a *different* identity is refused rather than
+ * matched on email, so registering a second Supabase account with someone's
+ * address cannot borrow their role.
+ */
+async function profileFor(authUserId: string, email: string | null | undefined): Promise<User | null> {
+  const store = getDataStore();
+
+  const linked = await store.users.findByAuthUserId(authUserId);
+  if (linked) return linked;
+
+  if (!email) return null;
+  const byEmail = await store.users.findByEmail(email);
+  if (!byEmail || byEmail.authUserId) return null;
+  return byEmail;
+}
+
 /** The signed-in user, or null. Safe to call from any server component. */
 export async function getSession(): Promise<AuthUser | null> {
-  const token = (await cookies()).get(SESSION_COOKIE)?.value;
-  if (!token) return null;
+  // getUser() revalidates the access token with Supabase rather than trusting
+  // the cookie, which is the point: a cookie is whatever the client sent.
+  const { data, error } = await (await client()).auth.getUser();
+  if (error || !data.user) return null;
 
-  const parsed = parse(token);
-  if (!parsed) return null;
-
-  const user = await getDataStore().users.findById(parsed.userId);
-  if (!user || !user.isActive) return null;
-  return toAuthUser(user);
+  const profile = await profileFor(data.user.id, data.user.email);
+  if (!profile || !profile.isActive) return null;
+  return toAuthUser(profile);
 }
 
 export async function requireUser(): Promise<AuthUser> {
@@ -96,30 +98,41 @@ export async function requireAdmin(): Promise<AuthUser> {
 export type SignInResult = { ok: true; user: AuthUser } | { ok: false; message: string };
 
 export async function signIn(email: string, password: string): Promise<SignInResult> {
-  const user = await getDataStore().users.findByEmail(email);
+  const supabase = await client();
+  const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
 
-  // One message for both cases, so the form can't be used to discover accounts.
-  if (!user || !verifyPassword(password, user.passwordHash)) {
+  // One message whether the address is unknown or the password is wrong, so
+  // the form can't be used to discover which accounts exist.
+  if (error || !data.user) {
     return { ok: false, message: "That email and password don't match an account." };
   }
-  if (!user.isActive) {
+
+  const store = getDataStore();
+  const linked = await store.users.findByAuthUserId(data.user.id);
+  const profile = linked ?? (await store.users.findByEmail(data.user.email ?? email));
+
+  // An identity with no profile holds no role, so it must not get in. The
+  // Supabase session is discarded as well, or the cookie would survive the
+  // refusal and the proxy would wave the next request through.
+  if (!profile) {
+    await supabase.auth.signOut();
+    return { ok: false, message: "That sign-in has no Reservo profile. Ask an admin to add you." };
+  }
+  if (profile.authUserId && profile.authUserId !== data.user.id) {
+    await supabase.auth.signOut();
+    return { ok: false, message: "That email belongs to another sign-in. Ask an admin to sort it out." };
+  }
+  if (!profile.isActive) {
+    await supabase.auth.signOut();
     return { ok: false, message: "That account has been deactivated. Ask an admin to re-enable it." };
   }
 
-  const expiresAt = Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000;
-  (await cookies()).set({
-    name: SESSION_COOKIE,
-    value: serialise(user.id, expiresAt),
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    expires: new Date(expiresAt),
-  });
-
-  return { ok: true, user: await toAuthUser(user) };
+  // First successful sign-in binds the profile to the identity, so later
+  // requests resolve on the link column and a change of email cannot move it.
+  const bound = profile.authUserId ? profile : await store.users.update(profile.id, { authUserId: data.user.id });
+  return { ok: true, user: await toAuthUser(bound) };
 }
 
 export async function signOut(): Promise<void> {
-  (await cookies()).delete(SESSION_COOKIE);
+  await (await client()).auth.signOut();
 }

@@ -63,13 +63,15 @@ export type ReservationFilter = {
   to?: Date;
 };
 
-export type UserPatch = Partial<Pick<User, "role" | "isActive" | "name" | "departmentId">>;
+export type UserPatch = Partial<Pick<User, "role" | "isActive" | "name" | "departmentId" | "authUserId">>;
 
 export type ResourceDraft = Omit<Resource, "id" | "createdAt">;
 
 export interface UserRepository {
   findById(id: string): Promise<User | null>;
   findByEmail(email: string): Promise<User | null>;
+  /** By Supabase Auth identity — the lookup every signed-in request makes. */
+  findByAuthUserId(authUserId: string): Promise<User | null>;
   list(): Promise<User[]>;
   update(id: string, patch: UserPatch): Promise<User>;
   create(input: Omit<User, "id" | "createdAt">): Promise<User>;

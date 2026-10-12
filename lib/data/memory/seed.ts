@@ -8,7 +8,6 @@
  */
 
 import { addDaysISO, fromLocal, localToday, localWeekday, startOfLocalDay } from "@/lib/domain/time";
-import { hashPassword } from "@/lib/auth/password";
 import type {
   AuditLog,
   Blackout,
@@ -36,7 +35,11 @@ export type Tables = {
   codeCounter: number;
 };
 
-/** The shared dev password for every seeded account. */
+/**
+ * The shared dev password for every seeded account. It is set on the Supabase
+ * identity by `npm run db:seed`, not stored here — this is only the value the
+ * seeder uses and the sign-in form shows.
+ */
 export const DEV_PASSWORD = "reservo123";
 
 const MON_TO_FRI = [1, 2, 3, 4, 5];
@@ -74,7 +77,6 @@ export function buildSeed(now: Date = new Date()): Tables {
   // is seeded onto a day the rooms are closed.
   const anchor = isWeekday(today) ? today : businessDay(today, 1);
   const day = (offset: number) => businessDay(anchor, offset);
-  const passwordHash = hashPassword(DEV_PASSWORD);
 
   const departments: Department[] = [
     { id: "dep-eng", name: "Engineering" },
@@ -85,13 +87,13 @@ export function buildSeed(now: Date = new Date()): Tables {
 
   const createdAt = at(day(-20), "09:00");
   const users: User[] = [
-    { id: "usr-vi", name: "Vishwaka Bandara", email: "admin@reservo.test", passwordHash, role: "admin", departmentId: "dep-eng", isActive: true, createdAt },
-    { id: "usr-aqsa", name: "Aqsa Shaikh", email: "member@reservo.test", passwordHash, role: "member", departmentId: "dep-ops", isActive: true, createdAt },
-    { id: "usr-nimal", name: "Nimal Perera", email: "nimal@reservo.test", passwordHash, role: "admin", departmentId: "dep-fac", isActive: true, createdAt },
-    { id: "usr-kavindi", name: "Kavindi Silva", email: "kavindi@reservo.test", passwordHash, role: "member", departmentId: "dep-mkt", isActive: true, createdAt },
-    { id: "usr-kasun", name: "Kasun Jayawardena", email: "kasun@reservo.test", passwordHash, role: "member", departmentId: "dep-ops", isActive: true, createdAt },
-    { id: "usr-ruwan", name: "Ruwan Fernando", email: "ruwan@reservo.test", passwordHash, role: "member", departmentId: "dep-eng", isActive: true, createdAt },
-    { id: "usr-dilani", name: "Dilani Jayasuriya", email: "dilani@reservo.test", passwordHash, role: "member", departmentId: "dep-mkt", isActive: false, createdAt },
+    { id: "usr-vi", name: "Vishwaka Bandara", email: "admin@reservo.test", authUserId: null, role: "admin", departmentId: "dep-eng", isActive: true, createdAt },
+    { id: "usr-aqsa", name: "Aqsa Shaikh", email: "member@reservo.test", authUserId: null, role: "member", departmentId: "dep-ops", isActive: true, createdAt },
+    { id: "usr-nimal", name: "Nimal Perera", email: "nimal@reservo.test", authUserId: null, role: "admin", departmentId: "dep-fac", isActive: true, createdAt },
+    { id: "usr-kavindi", name: "Kavindi Silva", email: "kavindi@reservo.test", authUserId: null, role: "member", departmentId: "dep-mkt", isActive: true, createdAt },
+    { id: "usr-kasun", name: "Kasun Jayawardena", email: "kasun@reservo.test", authUserId: null, role: "member", departmentId: "dep-ops", isActive: true, createdAt },
+    { id: "usr-ruwan", name: "Ruwan Fernando", email: "ruwan@reservo.test", authUserId: null, role: "member", departmentId: "dep-eng", isActive: true, createdAt },
+    { id: "usr-dilani", name: "Dilani Jayasuriya", email: "dilani@reservo.test", authUserId: null, role: "member", departmentId: "dep-mkt", isActive: false, createdAt },
   ];
 
   const resourceTypes: ResourceType[] = [

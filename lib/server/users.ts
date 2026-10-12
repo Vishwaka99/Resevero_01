@@ -6,7 +6,7 @@
 import { getDataStore } from "@/lib/data";
 import type { AuthUser } from "@/lib/auth/session";
 import type { Role, User } from "@/lib/domain/types";
-import { hashPassword } from "@/lib/auth/password";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { notFound, ruleViolation } from "./errors";
 
 export type UserRow = {
@@ -35,7 +35,10 @@ export type InviteInput = {
   email: string;
   role: Role;
   departmentId: string | null;
-  /** Temporary password. In production this becomes an emailed invite link. */
+  /**
+   * Temporary password, set on the new Supabase identity. In production this
+   * becomes `inviteUserByEmail` and the invitee chooses their own.
+   */
   temporaryPassword: string;
 };
 
@@ -50,26 +53,50 @@ export async function inviteUser(actor: AuthUser, input: InviteInput): Promise<U
     throw ruleViolation("The temporary password needs at least 8 characters.");
   }
 
-  return store.runInTransaction(async () => {
-    const user = await store.users.create({
-      name: input.name.trim(),
-      email,
-      passwordHash: hashPassword(input.temporaryPassword),
-      role: input.role,
-      departmentId: input.departmentId,
-      isActive: true,
-    });
-
-    await store.audit.create({
-      actorId: actor.id,
-      entity: "user",
-      entityId: user.id,
-      action: "user.invite",
-      diff: { email: user.email, role: user.role },
-    });
-
-    return user;
+  // The identity comes first. If the profile insert then fails we are left
+  // with an unused Supabase account, which is recoverable; the other order
+  // leaves a profile that can never sign in, which looks like a working user.
+  const admin = createAdminClient();
+  const created = await admin.auth.admin.createUser({
+    email,
+    password: input.temporaryPassword,
+    // Nobody is going to click a confirmation link for a colleague, and an
+    // unconfirmed identity cannot sign in with a password.
+    email_confirm: true,
   });
+
+  if (created.error || !created.data.user) {
+    throw ruleViolation(created.error?.message ?? "Could not create that sign-in.");
+  }
+  const authUserId = created.data.user.id;
+
+  try {
+    return await store.runInTransaction(async () => {
+      const user = await store.users.create({
+        name: input.name.trim(),
+        email,
+        authUserId,
+        role: input.role,
+        departmentId: input.departmentId,
+        isActive: true,
+      });
+
+      await store.audit.create({
+        actorId: actor.id,
+        entity: "user",
+        entityId: user.id,
+        action: "user.invite",
+        diff: { email: user.email, role: user.role },
+      });
+
+      return user;
+    });
+  } catch (error) {
+    // Roll the identity back, so a retry is not blocked by "already
+    // registered" for an account that has no profile.
+    await admin.auth.admin.deleteUser(authUserId).catch(() => {});
+    throw error;
+  }
 }
 
 export async function setRole(actor: AuthUser, userId: string, role: Role): Promise<User> {

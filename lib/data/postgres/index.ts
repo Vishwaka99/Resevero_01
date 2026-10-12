@@ -84,7 +84,7 @@ const COLUMNS = {
     id,
     name,
     email,
-    password_hash as "passwordHash",
+    auth_user_id  as "authUserId",
     role,
     department_id as "departmentId",
     is_active     as "isActive",
@@ -214,6 +214,14 @@ const users: UserRepository = {
     return row ?? null;
   },
 
+  async findByAuthUserId(authUserId) {
+    const sql = db();
+    const [row] = await sql<UserRow[]>`
+      select ${sql.unsafe(COLUMNS.user)} from users where auth_user_id = ${authUserId}
+    `;
+    return row ?? null;
+  },
+
   async list() {
     const sql = db();
     return sql<UserRow[]>`select ${sql.unsafe(COLUMNS.user)} from users order by name`;
@@ -226,6 +234,7 @@ const users: UserRepository = {
       role: "role",
       isActive: "is_active",
       departmentId: "department_id",
+      authUserId: "auth_user_id",
     });
 
     if (!Object.keys(changes).length) {
@@ -244,8 +253,8 @@ const users: UserRepository = {
   async create(input) {
     const sql = db();
     const [row] = await sql<UserRow[]>`
-      insert into users (name, email, password_hash, role, department_id, is_active)
-      values (${input.name}, ${input.email}, ${input.passwordHash}, ${input.role}, ${input.departmentId}, ${input.isActive})
+      insert into users (name, email, auth_user_id, role, department_id, is_active)
+      values (${input.name}, ${input.email}, ${input.authUserId}, ${input.role}, ${input.departmentId}, ${input.isActive})
       returning ${sql.unsafe(COLUMNS.user)}
     `;
     return row;

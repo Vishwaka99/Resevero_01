@@ -47,7 +47,12 @@ export type User = {
   id: string;
   name: string;
   email: string;
-  passwordHash: string;
+  /**
+   * The Supabase Auth identity this profile signs in with, or null for a
+   * profile that has never been linked to one. The credential itself lives in
+   * Supabase; the role below does not, so that revoking it is immediate.
+   */
+  authUserId: string | null;
   role: Role;
   departmentId: string | null;
   isActive: boolean;
