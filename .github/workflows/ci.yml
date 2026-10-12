@@ -2,14 +2,16 @@ name: CI
 
 # Runs on every push to any branch, so a branch is verified as soon as it is
 # pushed — before it is merged, and whether or not a pull request exists yet.
+#
+# Deliberately push-only. A pull_request trigger would either duplicate every
+# run, or, if guarded to skip same-repo pull requests, leave a "skipped" check
+# on the commit — and GitHub counts a skipped check as satisfying a required
+# one, so the merge gate could pass without the code ever being verified.
+# A fork pull request therefore reports no checks and stays blocked, which
+# fails closed and is the safe direction for a gate.
 on:
   push:
     branches: ['**']
-  # A push to a fork does not raise a push event here, so cover fork pull
-  # requests too. Same-repo pull requests are skipped by the job guard below,
-  # which keeps them from running twice over the same commit.
-  pull_request:
-    branches: [main]
   workflow_dispatch:
 
 # A new push to the same branch supersedes the run already in flight.
@@ -28,8 +30,6 @@ env:
 jobs:
   verify:
     name: Typecheck, lint and test
-    # Run for any push, and for pull requests only when they come from a fork.
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -53,7 +53,6 @@ jobs:
 
   build:
     name: Production build
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
