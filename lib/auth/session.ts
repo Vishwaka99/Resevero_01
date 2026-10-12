@@ -1,4 +1,4 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 import { getDataStore } from "@/lib/data";
 import type { Role, User } from "@/lib/domain/types";
@@ -122,15 +122,86 @@ export async function signIn(email: string, password: string): Promise<SignInRes
     await supabase.auth.signOut();
     return { ok: false, message: "That email belongs to another sign-in. Ask an admin to sort it out." };
   }
+  // Covers both a registration nobody has approved yet and an account that has
+  // been switched off, without saying which — and without claiming a brand new
+  // account "has been deactivated".
   if (!profile.isActive) {
     await supabase.auth.signOut();
-    return { ok: false, message: "That account has been deactivated. Ask an admin to re-enable it." };
+    return { ok: false, message: "That account isn't active. An admin has to enable it before you can sign in." };
   }
 
   // First successful sign-in binds the profile to the identity, so later
   // requests resolve on the link column and a change of email cannot move it.
   const bound = profile.authUserId ? profile : await store.users.update(profile.id, { authUserId: data.user.id });
   return { ok: true, user: await toAuthUser(bound) };
+}
+
+export type SignUpResult = { ok: true } | { ok: false; message: string };
+
+/**
+ * Where Supabase should send the confirmation link back to. It has to be on the
+ * project's redirect allow-list, or Supabase falls back to the configured Site
+ * URL and the link lands on the wrong host.
+ */
+async function confirmUrl(): Promise<string> {
+  const incoming = await headers();
+  const host = incoming.get("x-forwarded-host") ?? incoming.get("host") ?? "localhost:3000";
+  const protocol = incoming.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
+  return `${protocol}://${host}/auth/confirm`;
+}
+
+/**
+ * Self-registration.
+ *
+ * Creates the Supabase identity and a profile that is **not active**: an admin
+ * enables it on the Users screen. So registering proves an address and queues a
+ * request; it does not grant access, and nobody can book a room by signing
+ * themselves up.
+ *
+ * Every outcome that is not a usable error reads as success. An address that
+ * already has a profile is left untouched, and Supabase's own "already
+ * registered" is folded in too, because a form that distinguishes the two is a
+ * way of asking which addresses have accounts.
+ */
+export async function signUp(input: { name: string; email: string; password: string }): Promise<SignUpResult> {
+  const email = input.email.trim().toLowerCase();
+  const store = getDataStore();
+
+  if (await store.users.findByEmail(email)) return { ok: true };
+
+  const supabase = await client();
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password: input.password,
+    options: { emailRedirectTo: await confirmUrl() },
+  });
+
+  if (error) {
+    if (error.code === "user_already_exists" || /already (registered|exists)/i.test(error.message)) {
+      return { ok: true };
+    }
+    // Worth passing through: a rejected password says what is wrong with it.
+    return { ok: false, message: error.message };
+  }
+  if (!data.user) return { ok: false, message: "Could not create that account. Try again." };
+
+  // A project with email confirmation switched off hands back a live session.
+  // The account is not approved, so that session is thrown away rather than
+  // leaving someone half signed in.
+  if (data.session) await supabase.auth.signOut();
+
+  // If this throws, the identity exists with no profile. Sign-in refuses that
+  // combination by name, and an admin can invite the address properly.
+  await store.users.create({
+    name: input.name.trim(),
+    email,
+    authUserId: data.user.id,
+    role: "member",
+    departmentId: null,
+    isActive: false,
+  });
+
+  return { ok: true };
 }
 
 export async function signOut(): Promise<void> {

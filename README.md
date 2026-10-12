@@ -90,6 +90,27 @@ These are *profiles*. Since sign-in moved to Supabase Auth, each also needs an
 The profile and the identity are joined on email at first sign-in, and the link
 is stored in `users.auth_user_id` from then on.
 
+### Registering
+
+`/sign-up` takes a name, a work email and a password. It creates the Supabase
+identity and a profile that is **inactive**, so registering queues a request
+rather than granting access — nobody books a room by signing themselves up. An
+admin turns the account on from **Admin → Users**, which is the Activate
+control that was already there.
+
+The confirmation link in Supabase's email comes back to `/auth/confirm`, which
+verifies the token, discards the session it creates (the account is not
+approved yet, and a valid token for an account the app refuses is a confusing
+state to leave someone in) and returns to sign-in with a note.
+
+For the link to arrive at the right host, add `<your origin>/auth/confirm` to
+**Authentication → URL Configuration → Redirect URLs** in Supabase. Without it
+Supabase falls back to the project's Site URL.
+
+The form answers the same way whether or not the address is already known —
+same wording, and an address that already has a profile is left untouched — so
+it cannot be used to find out who has an account.
+
 ### Other commands
 
 ```bash
@@ -313,10 +334,14 @@ Supabase instead of trusting the cookie. That is a network call per request:
 `auth.getClaims()` verifies locally against the project's JWKS and would remove
 it, which is the first thing to reach for if this shows up in latency.
 
-Creating an account needs the service-role key, so `inviteUser` goes through
-`utils/supabase/admin.ts`. It creates the identity before the profile: an
-unused identity is recoverable, whereas a profile that can never sign in looks
-like a working user.
+Creating an account *for someone else* needs the service-role key, so
+`inviteUser` goes through `utils/supabase/admin.ts`. It creates the identity
+before the profile: an unused identity is recoverable, whereas a profile that
+can never sign in looks like a working user.
+
+Self-registration does not need that key — `signUp` acts as the visitor, with
+the publishable key — but it only ever produces an inactive profile. See
+[Registering](#registering).
 
 ---
 

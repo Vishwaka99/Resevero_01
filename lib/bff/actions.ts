@@ -16,7 +16,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { requireAdmin, requireUser, signIn, signOut } from "@/lib/auth/session";
+import { requireAdmin, requireUser, signIn, signOut, signUp } from "@/lib/auth/session";
 import { approveReservation, rejectReservation } from "@/lib/server/approvals";
 import type { AvailabilityCheck } from "@/lib/server/availability";
 import { isDomainError } from "@/lib/server/errors";
@@ -39,6 +39,7 @@ import {
   setActiveInput,
   setRoleInput,
   signInInput,
+  signUpInput,
   toMinutes,
 } from "./schemas";
 
@@ -83,6 +84,20 @@ export async function signInAction(_previous: ActionState, form: FormData): Prom
   if (!result.ok) return errorState(result.message);
 
   redirect(parsed.data.redirectTo ?? "/dashboard");
+}
+
+export async function signUpAction(_previous: ActionState, form: FormData): Promise<ActionState> {
+  const parsed = parseForm(signUpInput, form);
+  if (!parsed.ok) return errorState("Check the form and try again.", parsed.errors);
+
+  const result = await signUp(parsed.data);
+  if (!result.ok) return errorState(result.message);
+
+  // Deliberately the same message whether or not the address was already
+  // known, so the form cannot be used to discover who has an account.
+  return successState(
+    "Check your email for a confirmation link. An admin enables new accounts, so sign-in will work once yours is approved.",
+  );
 }
 
 export async function signOutAction(): Promise<void> {
