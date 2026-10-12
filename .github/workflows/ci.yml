@@ -1,0 +1,79 @@
+name: CI
+
+# Runs on every push to any branch, so a branch is verified as soon as it is
+# pushed — before it is merged, and whether or not a pull request exists yet.
+on:
+  push:
+    branches: ['**']
+  # A push to a fork does not raise a push event here, so cover fork pull
+  # requests too. Same-repo pull requests are skipped by the job guard below,
+  # which keeps them from running twice over the same commit.
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# A new push to the same branch supersedes the run already in flight.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Services talk to repository ports, so the in-memory adapter exercises the
+  # same code paths without a database. CI stays hermetic and needs no secrets.
+  DATA_ADAPTER: memory
+
+jobs:
+  verify:
+    name: Typecheck, lint and test
+    # Run for any push, and for pull requests only when they come from a fork.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+  build:
+    name: Production build
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      # Lets Next reuse compilation output across runs on the same lockfile.
+      - name: Restore Next build cache
+        uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('app/**', 'components/**', 'lib/**', 'styles/**', 'utils/**') }}
+          restore-keys: |
+            next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+
+      - name: Build
+        run: npm run build
