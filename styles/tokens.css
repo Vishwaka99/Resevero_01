@@ -2,3 +2,27 @@
 :root, [data-theme="light"]{--canvas: #f4f6fb;--surface: #ffffff;--surface-sunken: #eef1f7;--surface-hover: #f6f8fc;--border: #e3e7f0;--border-strong: #8a93a8;--ink: #0f1629;--ink-muted: #565f74;--primary: #2446d8;--primary-hover: #1b37b0;--on-primary: #ffffff;--primary-soft: #e8edff;--primary-ink: #1b37b0;--success: #0f7a55;--success-soft: #e2f5ec;--warning: #965400;--warning-soft: #fff2db;--danger: #c0321d;--danger-soft: #fdebe8;--on-danger: #ffffff;--neutral-soft: #eceff5;--slot-busy: #cdd5e6;--slot-blocked: #9aa3b6;--chart-1: #2446d8;--chart-2: #0b8fa8;--chart-3: #c26c00;--chart-track: #e6eaf3;--logo-accent: #f5a524;--focus-ring: var(--primary);--shadow-card: 0 1px 2px rgba(16,24,40,0.04), 0 1px 3px rgba(16,24,40,0.06);--shadow-pop: 0 12px 32px rgba(16,24,40,0.14);}
 [data-theme="dark"]{--canvas: #0d111c;--surface: #161b29;--surface-sunken: #0f1420;--surface-hover: #1c2233;--border: #262d40;--border-strong: #5f6982;--ink: #eef1f8;--ink-muted: #a3abc0;--primary: #8098ff;--primary-hover: #9cb0ff;--on-primary: #0a0f26;--primary-soft: #1c2550;--primary-ink: #b9c6ff;--success: #4cc99a;--success-soft: #0f2a20;--warning: #f2b04c;--warning-soft: #2d2210;--danger: #ff8c78;--danger-soft: #3a1712;--on-danger: #1f0905;--neutral-soft: #232a3c;--slot-busy: #33405f;--slot-blocked: #4a536b;--chart-1: #8098ff;--chart-2: #3cc6dc;--chart-3: #f5b04a;--chart-track: #262d40;--logo-accent: #f5b04a;--focus-ring: var(--primary);--shadow-card: 0 1px 2px rgba(0,0,0,0.4);--shadow-pop: 0 12px 32px rgba(0,0,0,0.55);}
 :root{--space-1: 4px;--space-2: 8px;--space-3: 12px;--space-4: 16px;--space-5: 20px;--space-6: 24px;--space-8: 32px;--space-12: 48px;--radius-sm: 6px;--radius-md: 10px;--radius-lg: 14px;--radius-pill: 999px;--sidebar-width: 248px;--topbar-height: 64px;--control-height: 40px;--hour-width: 88px;--font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;--font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;}
+
+/* ------------------------------------------------------------------ *
+ * Choosing a theme.
+ *
+ * The palettes above are selected by `data-theme` on <html>, which only a
+ * deliberate choice sets. Someone who has not chosen should still get the
+ * dark palette if their system asks for one, so the same declarations are
+ * repeated here behind the media query — generated from the block above
+ * rather than written twice, so they cannot drift apart.
+ *
+ * `:not([data-theme="light"])` is what lets an explicit "light" win over a
+ * system preference for dark, rather than the two fighting.
+ *
+ * `color-scheme` is separate and easy to forget: it is what tells the browser
+ * to darken the scrollbars, the form controls and the autofill backgrounds it
+ * draws itself, none of which read our custom properties.
+ * ------------------------------------------------------------------ */
+
+:root, [data-theme="light"] { color-scheme: light; }
+[data-theme="dark"] { color-scheme: dark; }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { color-scheme: dark;--canvas: #0d111c;--surface: #161b29;--surface-sunken: #0f1420;--surface-hover: #1c2233;--border: #262d40;--border-strong: #5f6982;--ink: #eef1f8;--ink-muted: #a3abc0;--primary: #8098ff;--primary-hover: #9cb0ff;--on-primary: #0a0f26;--primary-soft: #1c2550;--primary-ink: #b9c6ff;--success: #4cc99a;--success-soft: #0f2a20;--warning: #f2b04c;--warning-soft: #2d2210;--danger: #ff8c78;--danger-soft: #3a1712;--on-danger: #1f0905;--neutral-soft: #232a3c;--slot-busy: #33405f;--slot-blocked: #4a536b;--chart-1: #8098ff;--chart-2: #3cc6dc;--chart-3: #f5b04a;--chart-track: #262d40;--logo-accent: #f5b04a;--focus-ring: var(--primary);--shadow-card: 0 1px 2px rgba(0,0,0,0.4);--shadow-pop: 0 12px 32px rgba(0,0,0,0.55); }
+}

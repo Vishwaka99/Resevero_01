@@ -41,7 +41,21 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    // The script below writes to <html>, which the server did not render.
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        {/*
+          Runs before the first paint, so a stored choice is applied without
+          the page flashing the other theme first. It sets nothing when there
+          is no stored choice: the stylesheet's prefers-color-scheme rule is
+          already right, and writing an attribute here would override it.
+        */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var t=localStorage.getItem("rv-theme");if(t==="dark"||t==="light")document.documentElement.dataset.theme=t}catch(e){}`,
+          }}
+        />
+      </head>
       <body
         className={`${sans.variable} ${mono.variable}`}
         style={{

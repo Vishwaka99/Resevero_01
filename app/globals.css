@@ -27,30 +27,49 @@ body {
 a { color: var(--primary); }
 a:hover { color: var(--primary-hover); }
 
+:root {
+  /* The content column. The page and the top bar both measure from this, so
+     the search box, the avatar and the content below them line up on one
+     grid instead of the bar spanning the window while the page does not. */
+  --content-max: 1280px;
+}
+
 .rv-shell { display: flex; min-height: 100vh; background: var(--canvas); }
 .rv-shell-main { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; }
 
 .rv-topbar {
   height: var(--topbar-height);
-  padding: 0 var(--space-6);
+  padding: 0;
   display: flex;
-  align-items: center;
-  gap: var(--space-4);
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
   z-index: 20;
 }
-.rv-topbar-search { flex: 1 1 auto; max-width: 440px; }
-.rv-topbar-end { margin-left: auto; display: flex; align-items: center; gap: var(--space-3); }
+/* The bar's surface runs edge to edge; what is inside it does not. */
+.rv-topbar-inner {
+  width: 100%;
+  max-width: var(--content-max);
+  margin-inline: auto;
+  padding: 0 var(--space-8);
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+.rv-topbar-search { flex: 1 1 auto; max-width: 420px; }
+.rv-topbar-end { margin-left: auto; display: flex; align-items: center; gap: var(--space-2); }
 
 .rv-page {
-  padding: var(--space-6);
+  /* margin-inline is the fix for the obvious one: a max-width with no auto
+     margin pins the column to the left of a wide window while the bar above
+     it spans the whole width, and the two visibly disagree. */
+  margin-inline: auto;
+  padding: var(--space-8) var(--space-8) var(--space-12);
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
-  max-width: 1280px;
+  gap: var(--space-8);
+  max-width: var(--content-max);
   width: 100%;
 }
 .rv-page-head {
@@ -59,9 +78,12 @@ a:hover { color: var(--primary-hover); }
   align-items: flex-end;
   justify-content: space-between;
   gap: var(--space-4);
+  /* A title sitting the same distance from its content as two cards sit from
+     each other reads as one more card. This separates the two. */
+  margin-bottom: calc(var(--space-2) * -1);
 }
-.rv-page-title { margin: 0; font: 700 24px/32px var(--font-sans); letter-spacing: -0.01em; }
-.rv-page-sub { margin: 4px 0 0; color: var(--ink-muted); font-size: 14px; max-width: 70ch; }
+.rv-page-title { margin: 0; font: 700 26px/34px var(--font-sans); letter-spacing: -0.015em; }
+.rv-page-sub { margin: 6px 0 0; color: var(--ink-muted); font-size: 14px; max-width: 64ch; }
 .rv-page-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); }
 
 .rv-grid { display: grid; gap: var(--space-6); }
@@ -160,6 +182,11 @@ a:hover { color: var(--primary-hover); }
 .rv-heat-cell { height: 28px; border-radius: var(--radius-sm); background: var(--chart-track); }
 .rv-heat-label { font: 500 11px/16px var(--font-mono); color: var(--ink-muted); }
 
+@media (max-width: 1400px) {
+  .rv-topbar-inner,
+  .rv-page { padding-inline: var(--space-6); }
+}
+
 @media (max-width: 1200px) {
   .rv-side { width: 72px; padding: var(--space-4) var(--space-2); }
   .rv-side-section { display: none; }
@@ -175,8 +202,8 @@ a:hover { color: var(--primary-hover); }
 
 @media (max-width: 768px) {
   .rv-side { display: none; }
-  .rv-page { padding: var(--space-4); gap: var(--space-4); padding-bottom: 88px; }
-  .rv-topbar { padding: 0 var(--space-4); }
+  .rv-page { padding: var(--space-4); gap: var(--space-5); padding-bottom: 88px; }
+  .rv-topbar-inner { padding: 0 var(--space-4); }
   .rv-grid-2,
   .rv-grid-3 { grid-template-columns: minmax(0, 1fr); }
   .rv-btn { height: 48px; }

@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import { Avatar, Button, Field, Icon, Logo } from "@/components/ui";
+import { Avatar, Button, Field, Icon, Logo, ThemeToggle } from "@/components/ui";
 import { signOutAction } from "@/lib/bff/actions";
 import type { NavItem, NavSection } from "@/lib/bff/views/shared";
 
@@ -74,6 +74,9 @@ export function AppShell({
 
       <div className="rv-shell-main">
         <header className="rv-topbar">
+          {/* The bar's surface spans the window; its contents line up with the
+              page column below, so the avatar and the content share an edge. */}
+          <div className="rv-topbar-inner">
           <form className="rv-topbar-search" action="/resources" role="search">
             <Field
               variant="search"
@@ -114,7 +117,9 @@ export function AppShell({
                 </span>
               ) : null}
             </Link>
+            <ThemeToggle />
             <Avatar name={user.name} subtitle={`${user.role === "admin" ? "Admin" : "Member"}${user.departmentName ? ` · ${user.departmentName}` : ""}`} />
+          </div>
           </div>
         </header>
 
