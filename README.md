@@ -128,6 +128,36 @@ clear one out and start again, delete it under **Authentication → Users**, or
 have an admin invite the address — an invite adopts an identity that already
 exists rather than refusing it.
 
+#### The approval handshake
+
+Two notes close the loop that registering opens, both over
+[Resend](https://resend.com) (`lib/server/mail.ts` — one HTTP POST, so there is
+no SDK and no SMTP client in the dependency list):
+
+| When | Who gets it | Why |
+| --- | --- | --- |
+| Someone registers | `APPROVALS_EMAIL` | An inactive profile nobody is told about is a request nobody answers. |
+| An admin activates them | the new user | Approval was otherwise invisible — the account quietly started working. |
+
+Neither can break what triggered it. `sendMail` never throws: a provider that
+is down, rate-limiting or simply unconfigured is logged and swallowed, because
+failing a registration over a notification would be the worse outcome. With no
+`RESEND_API_KEY` the message is written to the server log instead, so
+development and CI need no account and you can still read what would have been
+sent.
+
+Two limits of Resend worth knowing before you test, both the same shape as the
+Supabase one above:
+
+- `MAIL_FROM` has to be on a domain verified in Resend. The exception is its
+  own `onboarding@resend.dev`, which **only delivers to the Resend account's
+  own address** — fine for the approvals note, not for telling a new user they
+  are in.
+- So the second message needs a verified domain before it reaches anyone.
+
+Unset `APPROVALS_EMAIL` and the first note is simply not sent, which is the
+right behaviour for a deployment that would rather watch the Users screen.
+
 The form answers the same way whether or not the address is already known —
 same wording, and an address that already has a profile is left untouched — so
 it cannot be used to find out who has an account.
@@ -522,6 +552,10 @@ workaround.
 | `NEXT_PUBLIC_SUPABASE_URL` | — | Supabase project URL. **Required** — sign-in goes through Supabase Auth. |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | — | Public key, safe in the browser. RLS denies it everything. **Required** for sign-in. |
 | `SUPABASE_SERVICE_ROLE_KEY` | — | Service-role key. Needed to create an invited user's sign-in and to run `db:seed`. Bypasses RLS — never expose it to the browser. |
+| `RESEND_API_KEY` | — | Sends the approval emails. Unset means they are logged, not sent. |
+| `MAIL_FROM` | `Reservo <onboarding@resend.dev>` | Sender. Must be a domain verified in Resend. |
+| `APPROVALS_EMAIL` | — | Told when somebody registers. Unset means nobody is. |
+| `APP_URL` | `http://localhost:3000` | Origin for links inside emails. |
 
 `SESSION_SECRET` is gone: there is no longer an application-signed cookie to
 sign. Supabase issues and verifies the tokens.

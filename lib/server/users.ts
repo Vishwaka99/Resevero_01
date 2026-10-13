@@ -8,6 +8,7 @@ import type { AuthUser } from "@/lib/auth/session";
 import type { Role, User } from "@/lib/domain/types";
 import { createAdminClient, findIdentityByEmail } from "@/utils/supabase/admin";
 import { notFound, ruleViolation } from "./errors";
+import { notifyAccountApproved } from "./notify";
 
 export type UserRow = {
   user: User;
@@ -163,8 +164,8 @@ export async function setActive(actor: AuthUser, userId: string, isActive: boole
     if (admins.length <= 1) throw ruleViolation("There has to be at least one active admin.");
   }
 
-  return store.runInTransaction(async () => {
-    const updated = await store.users.update(userId, { isActive });
+  const updated = await store.runInTransaction(async () => {
+    const row = await store.users.update(userId, { isActive });
     await store.audit.create({
       actorId: actor.id,
       entity: "user",
@@ -172,8 +173,16 @@ export async function setActive(actor: AuthUser, userId: string, isActive: boole
       action: isActive ? "user.activate" : "user.deactivate",
       diff: { isActive },
     });
-    return updated;
+    return row;
   });
+
+  // Only on the transition, and only after the write has committed: telling
+  // someone they are in, and then rolling back, would be worse than silence.
+  if (isActive && !user.isActive) {
+    await notifyAccountApproved({ name: updated.name, email: updated.email });
+  }
+
+  return updated;
 }
 
 /**

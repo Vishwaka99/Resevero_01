@@ -3,6 +3,7 @@ import { cookies, headers } from "next/headers";
 import { getDataStore } from "@/lib/data";
 import type { Role, User } from "@/lib/domain/types";
 import { forbidden, unauthenticated } from "@/lib/server/errors";
+import { notifyApprovalQueue } from "@/lib/server/notify";
 import { createClient } from "@/utils/supabase/server";
 
 /**
@@ -199,7 +200,7 @@ export async function signUp(input: { name: string; email: string; password: str
 
   // If this throws, the identity exists with no profile. Sign-in refuses that
   // combination by name, and an admin can invite the address properly.
-  await store.users.create({
+  const profile = await store.users.create({
     name: input.name.trim(),
     email,
     authUserId: data.user.id,
@@ -207,6 +208,9 @@ export async function signUp(input: { name: string; email: string; password: str
     departmentId: null,
     isActive: false,
   });
+
+  // An inactive profile nobody is told about is a request nobody answers.
+  await notifyApprovalQueue({ name: profile.name, email: profile.email });
 
   return { ok: true };
 }
