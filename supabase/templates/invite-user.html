@@ -1,0 +1,48 @@
+<!--
+  Supabase > Authentication > Emails > "Invite user".
+
+  Sent when an admin adds someone from Admin > Users. Unlike a self
+  registration, an invited account is active immediately — an admin creating it
+  *is* the approval — so this one says "you can sign in", not "wait".
+-->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0;padding:24px 0;background:#f4f6fb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <tr>
+    <td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border:1px solid #e3e7f0;border-radius:14px;">
+        <tr>
+          <td style="padding:28px 32px 8px 32px;">
+            <span style="display:inline-block;font-size:18px;font-weight:700;color:#2446d8;letter-spacing:-0.01em;">Reservo</span>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:8px 32px 0 32px;">
+            <h1 style="margin:0 0 10px 0;font-size:22px;line-height:30px;font-weight:700;color:#0f1629;">You have been added to Reservo</h1>
+            <p style="margin:0 0 20px 0;font-size:15px;line-height:23px;color:#565f74;">
+              An admin created an account for <strong style="color:#0f1629;">{{ .Email }}</strong>. Reservo is where this
+              organisation books its rooms, equipment and vehicles — accept the invitation to set your password.
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:0 32px 24px 32px;">
+            <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite"
+               style="display:inline-block;padding:13px 22px;background:#2446d8;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;border-radius:9px;">
+              Accept invitation
+            </a>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:0 32px 28px 32px;border-top:1px solid #e3e7f0;">
+            <p style="margin:16px 0 0 0;font-size:13px;line-height:20px;color:#565f74;">
+              If the button does not work, paste this into your browser:<br />
+              <span style="color:#2446d8;word-break:break-all;">{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&amp;type=invite</span>
+            </p>
+            <p style="margin:12px 0 0 0;font-size:13px;line-height:20px;color:#565f74;">
+              Not expecting this? Ignore it, or tell whoever runs Reservo at your organisation.
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>

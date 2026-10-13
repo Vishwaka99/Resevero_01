@@ -123,6 +123,14 @@ whether it arrives and whether the link works, and both are easy to miss:
    ignores the `emailRedirectTo` this app sends and falls back to the project's
    Site URL, so the link lands somewhere that cannot read the token.
 
+`/auth/confirm` accepts both shapes a Supabase link arrives in — a PKCE
+`code` from the stock `{{ .ConfirmationURL }}`, or a `token_hash` from a
+template that links straight here — so an unedited project works. The templates
+in [`supabase/templates/`](supabase/templates) use the second, which is one
+redirect fewer and cannot be spent by a mail scanner following the link. They
+also say that confirming is not the last step, which the stock wording implies
+it is; see that directory's README for how to apply them.
+
 An identity whose email was never confirmed cannot sign in with a password. To
 clear one out and start again, delete it under **Authentication → Users**, or
 have an admin invite the address — an invite adopts an identity that already
@@ -447,6 +455,7 @@ lib/
   bff/                    view models, server actions, Zod schemas
   auth/                   session: Supabase identity -> app profile + role
 supabase/migrations/      the schema, as runnable SQL
+supabase/templates/       the auth emails Supabase sends, as HTML
 scripts/                  db:migrate and db:seed
 utils/supabase/           Supabase clients: browser, server, and service-role
 tests/                    the booking rules
