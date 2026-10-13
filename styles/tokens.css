@@ -26,3 +26,19 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) { color-scheme: dark;--canvas: #0d111c;--surface: #161b29;--surface-sunken: #0f1420;--surface-hover: #1c2233;--border: #262d40;--border-strong: #5f6982;--ink: #eef1f8;--ink-muted: #a3abc0;--primary: #8098ff;--primary-hover: #9cb0ff;--on-primary: #0a0f26;--primary-soft: #1c2550;--primary-ink: #b9c6ff;--success: #4cc99a;--success-soft: #0f2a20;--warning: #f2b04c;--warning-soft: #2d2210;--danger: #ff8c78;--danger-soft: #3a1712;--on-danger: #1f0905;--neutral-soft: #232a3c;--slot-busy: #33405f;--slot-blocked: #4a536b;--chart-1: #8098ff;--chart-2: #3cc6dc;--chart-3: #f5b04a;--chart-track: #262d40;--logo-accent: #f5b04a;--focus-ring: var(--primary);--shadow-card: 0 1px 2px rgba(0,0,0,0.4);--shadow-pop: 0 12px 32px rgba(0,0,0,0.55); }
 }
+
+/*
+ * The select chevron. One SVG, with the stroke written per theme, because a
+ * background image cannot read currentColor.
+ */
+:root, [data-theme="light"] {
+  --rv-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23565f74' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+[data-theme="dark"] {
+  --rv-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a3abc0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --rv-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a3abc0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  }
+}
