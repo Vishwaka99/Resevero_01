@@ -87,18 +87,28 @@ export async function signInAction(_previous: ActionState, form: FormData): Prom
 }
 
 export async function signUpAction(_previous: ActionState, form: FormData): Promise<ActionState> {
+  // Kept for every refusal below: a form that empties itself because one field
+  // was wrong makes the person retype the three that were right.
+  const typed = {
+    name: String(form.get("name") ?? ""),
+    email: String(form.get("email") ?? ""),
+  };
+
   const parsed = parseForm(signUpInput, form);
-  if (!parsed.ok) return errorState("Check the form and try again.", parsed.errors);
+  if (!parsed.ok) return { ...errorState("Check the form and try again.", parsed.errors), values: typed };
 
   const result = await signUp(parsed.data);
-  if (!result.ok) return errorState(result.message);
+  if (!result.ok) {
+    // A refusal that belongs to one field is shown under it, where the person
+    // is looking, rather than only in the banner above the form.
+    return {
+      ...errorState(result.message, result.field ? { [result.field]: result.message } : undefined),
+      values: typed,
+    };
+  }
 
-  // Deliberately the same message whether or not the address was already
-  // known, so the form cannot be used to discover who has an account.
-  return successState(
-    "If that address is new, a confirmation link is on its way to it. New accounts also need an admin to enable them, " +
-      "so sign in once yours has been approved.",
-  );
+  // signUp signed them in, so there is nowhere to wait.
+  redirect("/dashboard");
 }
 
 export async function signOutAction(): Promise<void> {

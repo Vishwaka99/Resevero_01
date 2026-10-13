@@ -2,41 +2,47 @@
 
 import { useActionState } from "react";
 
-import { Alert, Button, Field, LinkButton } from "@/components/ui";
+import { Alert, Button, Field } from "@/components/ui";
 import { signUpAction } from "@/lib/bff/actions";
 import { IDLE } from "@/lib/bff/action-state";
 
+/**
+ * There is no success branch: registering signs the person in and the action
+ * redirects, so the only thing this has to render well is a refusal — which
+ * means keeping what was typed. Both passwords are deliberately not carried
+ * back; they are short to retype and should not survive a round trip.
+ *
+ * The browser-level constraints below are a convenience, not the check. Every
+ * one of them is also in `signUpInput`, which is what actually decides —
+ * anything arriving at a server action has not necessarily been through this
+ * form.
+ */
 export function SignUpForm() {
   const [state, submit, pending] = useActionState(signUpAction, IDLE);
-
-  // On success the form is replaced rather than re-rendered empty: there is
-  // nothing more to type, and the next step happens in the inbox.
-  if (state.status === "success") {
-    return (
-      <div style={{ width: "100%", maxWidth: 400, display: "flex", flexDirection: "column", gap: 20 }}>
-        <h2 style={{ margin: 0, fontSize: 24, lineHeight: "32px", fontWeight: 700 }}>Almost there</h2>
-        <Alert tone="success" title="Account requested">
-          {state.message}
-        </Alert>
-        <LinkButton href="/sign-in" variant="secondary" size="lg" block>
-          Back to sign in
-        </LinkButton>
-      </div>
-    );
-  }
 
   return (
     <form action={submit} style={{ width: "100%", maxWidth: 400, display: "flex", flexDirection: "column", gap: 20 }}>
       <div>
         <h2 style={{ margin: 0, fontSize: 24, lineHeight: "32px", fontWeight: 700 }}>Create an account</h2>
         <p style={{ margin: "4px 0 0", color: "var(--ink-muted)", fontSize: 14 }}>
-          Use your work email. An admin approves new accounts before they can book anything.
+          Use your work email. You can start booking as soon as you have signed up.
         </p>
       </div>
 
       {state.status === "error" && state.message ? <Alert tone="danger" title={state.message} /> : null}
 
-      <Field label="Full name" name="name" type="text" placeholder="Nimal Perera" autoComplete="name" required error={state.errors?.name} />
+      <Field
+        label="Full name"
+        name="name"
+        type="text"
+        placeholder="Nimal Perera"
+        autoComplete="name"
+        required
+        defaultValue={state.values?.name}
+        minLength={2}
+        maxLength={80}
+        error={state.errors?.name}
+      />
       <Field
         label="Work email"
         name="email"
@@ -44,6 +50,8 @@ export function SignUpForm() {
         placeholder="name@company.lk"
         autoComplete="email"
         required
+        defaultValue={state.values?.email}
+        maxLength={160}
         error={state.errors?.email}
       />
       <Field
@@ -53,6 +61,8 @@ export function SignUpForm() {
         placeholder="••••••••"
         autoComplete="new-password"
         required
+        minLength={8}
+        maxLength={72}
         hint="At least 8 characters."
         error={state.errors?.password}
       />
@@ -63,6 +73,8 @@ export function SignUpForm() {
         placeholder="••••••••"
         autoComplete="new-password"
         required
+        minLength={8}
+        maxLength={72}
         error={state.errors?.confirmPassword}
       />
 

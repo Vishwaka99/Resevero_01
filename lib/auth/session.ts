@@ -1,9 +1,9 @@
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 
 import { getDataStore } from "@/lib/data";
 import type { Role, User } from "@/lib/domain/types";
 import { forbidden, unauthenticated } from "@/lib/server/errors";
-import { notifyApprovalQueue } from "@/lib/server/notify";
+import { createAdminClient, findIdentityByEmail } from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
 
 /**
@@ -137,80 +137,99 @@ export async function signIn(email: string, password: string): Promise<SignInRes
   return { ok: true, user: await toAuthUser(bound) };
 }
 
-export type SignUpResult = { ok: true } | { ok: false; message: string };
+export type SignUpResult = { ok: true } | { ok: false; message: string; field?: "email" | "password" };
 
 /**
- * Where Supabase should send the confirmation link back to. It has to be on the
- * project's redirect allow-list, or Supabase falls back to the configured Site
- * URL and the link lands on the wrong host.
- */
-async function confirmUrl(): Promise<string> {
-  const incoming = await headers();
-  const host = incoming.get("x-forwarded-host") ?? incoming.get("host") ?? "localhost:3000";
-  const protocol = incoming.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
-  return `${protocol}://${host}/auth/confirm`;
-}
-
-/**
- * Self-registration.
+ * Registration.
  *
- * Creates the Supabase identity and a profile that is **not active**: an admin
- * enables it on the Users screen. So registering proves an address and queues a
- * request; it does not grant access, and nobody can book a room by signing
- * themselves up.
+ * The account is usable the moment it is made: the identity is created
+ * already confirmed, the profile is active, and the caller is signed in with
+ * the password they just chose. Nothing is emailed and nothing is approved.
  *
- * Every outcome that is not a usable error reads as success. An address that
- * already has a profile is left untouched, and Supabase's own "already
- * registered" is folded in too, because a form that distinguishes the two is a
- * way of asking which addresses have accounts.
+ * That is a deliberate trade, and worth being clear about: no one proves they
+ * own the address they register, so an address alone is not evidence of
+ * anything here. Deactivation on the Users screen is the only gate left, and
+ * it is applied after the fact rather than before.
+ *
+ * Creating the identity goes through the service-role key rather than the
+ * public signUp endpoint, so that the result does not depend on whether the
+ * project happens to have email confirmation switched on.
  */
 export async function signUp(input: { name: string; email: string; password: string }): Promise<SignUpResult> {
   const email = input.email.trim().toLowerCase();
   const store = getDataStore();
 
-  if (await store.users.findByEmail(email)) return { ok: true };
+  if (await store.users.findByEmail(email)) {
+    return { ok: false, message: "That email already has an account. Sign in instead.", field: "email" };
+  }
 
-  const supabase = await client();
-  const { data, error } = await supabase.auth.signUp({
+  const admin = createAdminClient();
+  const created = await admin.auth.admin.createUser({
     email,
     password: input.password,
-    options: { emailRedirectTo: await confirmUrl() },
+    // No confirmation step, so the address is taken on trust and the account
+    // works immediately.
+    email_confirm: true,
   });
 
-  if (error) {
-    if (error.code === "user_already_exists" || /already (registered|exists)/i.test(error.message)) {
-      return { ok: true };
+  let authUserId: string;
+  let identityIsOurs = true;
+
+  if (created.error) {
+    if (!/already (registered|exists)/i.test(created.error.message)) {
+      return { ok: false, message: created.error.message };
     }
-    // Worth passing through: a rejected password says what is wrong with it.
-    return { ok: false, message: error.message };
+
+    // The identity exists but no profile points at it — the in-memory store
+    // was restarted, or a profile was deleted. Signing in with the password
+    // just typed is what proves this is the owner rather than someone
+    // claiming the address, so adopt it only if that succeeds.
+    const adopted = await findIdentityByEmail(admin, email);
+    const proof = adopted
+      ? await (await client()).auth.signInWithPassword({ email, password: input.password })
+      : null;
+
+    if (!adopted || !proof || proof.error || !proof.data.user) {
+      return { ok: false, message: "That email already has an account. Sign in instead.", field: "email" };
+    }
+
+    authUserId = adopted;
+    identityIsOurs = false;
+  } else if (!created.data.user) {
+    return { ok: false, message: "Could not create that account. Try again." };
+  } else {
+    authUserId = created.data.user.id;
   }
-  if (!data.user) return { ok: false, message: "Could not create that account. Try again." };
 
-  // When confirmations are on, Supabase will not admit that an address is
-  // taken: it answers with a decoy user — a random id and an empty
-  // `identities` array — and sends no email. Taking that id at face value
-  // would bind a profile to an identity that does not exist, and the real
-  // owner could never sign in again, so stop here instead.
-  if (data.user.identities?.length === 0) return { ok: true };
+  try {
+    await store.users.create({
+      name: input.name.trim(),
+      email,
+      authUserId,
+      role: "member",
+      departmentId: null,
+      isActive: true,
+    });
+  } catch (error) {
+    // Only an identity this call made may be removed; one that was adopted
+    // belonged to someone beforehand.
+    if (identityIsOurs) await admin.auth.admin.deleteUser(authUserId).catch(() => {});
+    throw error;
+  }
 
-  // A project with email confirmation switched off hands back a live session.
-  // The account is not approved, so that session is thrown away rather than
-  // leaving someone half signed in.
-  if (data.session) await supabase.auth.signOut();
-
-  // If this throws, the identity exists with no profile. Sign-in refuses that
-  // combination by name, and an admin can invite the address properly.
-  const profile = await store.users.create({
-    name: input.name.trim(),
-    email,
-    authUserId: data.user.id,
-    role: "member",
-    departmentId: null,
-    isActive: false,
-  });
-
-  // An inactive profile nobody is told about is a request nobody answers.
-  await notifyApprovalQueue({ name: profile.name, email: profile.email });
+  // Sign in with the credentials just chosen, so registering lands in the app
+  // rather than on a form asking for the password typed a second ago. An
+  // adopted identity is already signed in from the proof above.
+  if (identityIsOurs) {
+    const supabase = await client();
+    const { error } = await supabase.auth.signInWithPassword({ email, password: input.password });
+    if (error) {
+      // The account is real and the password is right, so this is a transport
+      // problem rather than a wrong answer. Sending them to sign in is a
+      // better outcome than discarding a working account.
+      return { ok: false, message: "Account created, but signing you in failed. Try signing in." };
+    }
+  }
 
   return { ok: true };
 }

@@ -92,83 +92,44 @@ is stored in `users.auth_user_id` from then on.
 
 ### Registering
 
-`/sign-up` takes a name, a work email and a password. It creates the Supabase
-identity and a profile that is **inactive**, so registering queues a request
-rather than granting access — nobody books a room by signing themselves up. An
-admin turns the account on from **Admin → Users**, which is the Activate
-control that was already there.
+`/sign-up` takes a name, a work email and a password, and the account works
+immediately: the Supabase identity is created already confirmed, the profile is
+active, and the person is signed in with the password they just chose. Nothing
+is emailed and nothing is approved.
 
-The confirmation link in Supabase's email comes back to `/auth/confirm`, which
-verifies the token, discards the session it creates (the account is not
-approved yet, and a valid token for an account the app refuses is a confusing
-state to leave someone in) and returns to sign-in with a note.
+That is a deliberate trade, and worth stating plainly. **Nobody proves they own
+the address they register**, so an address here is not evidence of anything,
+and anyone who can reach the page can book a room. Deactivation on
+**Admin → Users** is the only gate, and it applies after the fact rather than
+before. An organisation that needs the other arrangement has two options: hold
+new profiles inactive and approve them, or close `/sign-up` and invite people
+from the admin screen instead.
 
-#### Where the confirmation email goes
+The identity is created with the service-role key rather than through the
+public signup endpoint, so registering behaves the same whether or not the
+project has email confirmation switched on. One consequence: Supabase's own
+signup rate limiting does not apply, so a deployment facing the internet wants
+a rate limit in front of the action.
 
-Supabase sends it, to the address that was registered. Two settings decide
-whether it arrives and whether the link works, and both are easy to miss:
+An identity can outlive its profile — the in-memory store resets on every
+restart — and registering again adopts it, but only after signing in with the
+password supplied. That is what distinguishes the owner of an address from
+someone claiming it.
 
-1. **Who may receive it.** Supabase's built-in email service only delivers to
-   members of your Supabase organisation, and allows a couple of messages an
-   hour. Registering a personal address on a fresh project therefore looks like
-   nothing happening: the identity appears in **Authentication → Users** with
-   *Confirmed* unticked, and no mail is ever sent. Configure **Project Settings
-   → Authentication → SMTP** with a real provider before expecting delivery to
-   anyone outside the team. For local work it is usually quicker to skip email
-   entirely and use `npm run auth:seed`, which creates confirmed accounts
-   directly.
+#### Validating the form
 
-2. **Where the link points.** Add `<your origin>/auth/confirm` to
-   **Authentication → URL Configuration → Redirect URLs**. Without it Supabase
-   ignores the `emailRedirectTo` this app sends and falls back to the project's
-   Site URL, so the link lands somewhere that cannot read the token.
+`signUpInput` in `lib/bff/schemas.ts` decides: a name of 2–80 characters
+without the brackets that would break rendering wherever it is shown, an
+address that parses and fits in 160, a password of 8–72 characters that is not
+only spaces, and a confirmation that matches. 72 is bcrypt's limit — anything
+beyond it is silently ignored by the hash, so refusing is more honest than
+letting someone choose a password that is not the one they typed.
 
-`/auth/confirm` accepts both shapes a Supabase link arrives in — a PKCE
-`code` from the stock `{{ .ConfirmationURL }}`, or a `token_hash` from a
-template that links straight here — so an unedited project works. The templates
-in [`supabase/templates/`](supabase/templates) use the second, which is one
-redirect fewer and cannot be spent by a mail scanner following the link. They
-also say that confirming is not the last step, which the stock wording implies
-it is; see that directory's README for how to apply them.
+The same rules appear on the inputs as `required`, `minLength` and
+`maxLength`. That is a convenience for whoever is typing, not the check: a
+server action can be called without going near the form, so the schema runs on
+every submission regardless.
 
-An identity whose email was never confirmed cannot sign in with a password. To
-clear one out and start again, delete it under **Authentication → Users**, or
-have an admin invite the address — an invite adopts an identity that already
-exists rather than refusing it.
-
-#### The approval handshake
-
-Two notes close the loop that registering opens, both over
-[Resend](https://resend.com) (`lib/server/mail.ts` — one HTTP POST, so there is
-no SDK and no SMTP client in the dependency list):
-
-| When | Who gets it | Why |
-| --- | --- | --- |
-| Someone registers | `APPROVALS_EMAIL` | An inactive profile nobody is told about is a request nobody answers. |
-| An admin activates them | the new user | Approval was otherwise invisible — the account quietly started working. |
-
-Neither can break what triggered it. `sendMail` never throws: a provider that
-is down, rate-limiting or simply unconfigured is logged and swallowed, because
-failing a registration over a notification would be the worse outcome. With no
-`RESEND_API_KEY` the message is written to the server log instead, so
-development and CI need no account and you can still read what would have been
-sent.
-
-Two limits of Resend worth knowing before you test, both the same shape as the
-Supabase one above:
-
-- `MAIL_FROM` has to be on a domain verified in Resend. The exception is its
-  own `onboarding@resend.dev`, which **only delivers to the Resend account's
-  own address** — fine for the approvals note, not for telling a new user they
-  are in.
-- So the second message needs a verified domain before it reaches anyone.
-
-Unset `APPROVALS_EMAIL` and the first note is simply not sent, which is the
-right behaviour for a deployment that would rather watch the Users screen.
-
-The form answers the same way whether or not the address is already known —
-same wording, and an address that already has a profile is left untouched — so
-it cannot be used to find out who has an account.
 
 ### Other commands
 
@@ -399,9 +360,8 @@ Creating an account *for someone else* needs the service-role key, so
 before the profile: an unused identity is recoverable, whereas a profile that
 can never sign in looks like a working user.
 
-Self-registration does not need that key — `signUp` acts as the visitor, with
-the publishable key — but it only ever produces an inactive profile. See
-[Registering](#registering).
+Self-registration uses it too, so that a new account does not depend on the
+project's email settings. See [Registering](#registering).
 
 ---
 
@@ -455,7 +415,6 @@ lib/
   bff/                    view models, server actions, Zod schemas
   auth/                   session: Supabase identity -> app profile + role
 supabase/migrations/      the schema, as runnable SQL
-supabase/templates/       the auth emails Supabase sends, as HTML
 scripts/                  db:migrate and db:seed
 utils/supabase/           Supabase clients: browser, server, and service-role
 tests/                    the booking rules
@@ -561,10 +520,6 @@ workaround.
 | `NEXT_PUBLIC_SUPABASE_URL` | — | Supabase project URL. **Required** — sign-in goes through Supabase Auth. |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | — | Public key, safe in the browser. RLS denies it everything. **Required** for sign-in. |
 | `SUPABASE_SERVICE_ROLE_KEY` | — | Service-role key. Needed to create an invited user's sign-in and to run `db:seed`. Bypasses RLS — never expose it to the browser. |
-| `RESEND_API_KEY` | — | Sends the approval emails. Unset means they are logged, not sent. |
-| `MAIL_FROM` | `Reservo <onboarding@resend.dev>` | Sender. Must be a domain verified in Resend. |
-| `APPROVALS_EMAIL` | — | Told when somebody registers. Unset means nobody is. |
-| `APP_URL` | `http://localhost:3000` | Origin for links inside emails. |
 
 `SESSION_SECRET` is gone: there is no longer an application-signed cookie to
 sign. Supabase issues and verifies the tokens.

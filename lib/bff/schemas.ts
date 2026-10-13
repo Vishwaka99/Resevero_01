@@ -116,9 +116,28 @@ export const signInInput = z.object({
  */
 export const signUpInput = z
   .object({
-    name: z.string().trim().min(2, "Enter your name.").max(80),
-    email: z.string().trim().min(1, "Enter your work email.").email("That doesn't look like an email address."),
-    password: z.string().min(8, "Use at least 8 characters."),
+    name: z
+      .string()
+      .trim()
+      .min(2, "Enter your name.")
+      .max(80, "Use 80 characters or fewer.")
+      // Names vary far too much to pattern-match. This only rules out the
+      // characters that would make one unreadable wherever it is shown.
+      .regex(/^[^<>{}]*$/, "Remove any < > { } from your name."),
+    email: z
+      .string()
+      .trim()
+      .min(1, "Enter your work email.")
+      .max(160, "Use 160 characters or fewer.")
+      .email("That doesn't look like an email address."),
+    password: z
+      .string()
+      .min(8, "Use at least 8 characters.")
+      // Supabase hashes with bcrypt, which ignores anything past 72 bytes.
+      // Refusing is honest; truncating would leave someone with a password
+      // that is not the one they think they chose.
+      .max(72, "Use 72 characters or fewer.")
+      .refine((value) => value.trim().length >= 8, "A password cannot be only spaces."),
     confirmPassword: z.string().min(1, "Repeat your password."),
   })
   .refine((value) => value.password === value.confirmPassword, {

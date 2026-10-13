@@ -14,8 +14,8 @@ export default async function SignUpPage() {
   return (
     <AuthLayout
       aside={
-        <AuthAside heading="Ask for an account, book from day one.">
-          Register with your work email and an admin enables your access. Then every room, projector and van is one search away.
+        <AuthAside heading="Sign up, then book from day one.">
+          Register with your work email and you are straight in. Every room, projector and van is one search away.
         </AuthAside>
       }
     >

@@ -9,23 +9,9 @@ import { DEV_PASSWORD } from "@/lib/data/memory/seed";
 export const metadata: Metadata = { title: "Sign in" };
 export const dynamic = "force-dynamic";
 
-/** Set by `/auth/confirm` after it has read the link in Supabase's email. */
-const NOTICES: Record<string, { tone: "success" | "danger"; title: string; body: string }> = {
-  confirmed: {
-    tone: "success",
-    title: "Email confirmed",
-    body: "Your address is verified. An admin enables new accounts, so sign in once yours is approved.",
-  },
-  "link-invalid": {
-    tone: "danger",
-    title: "That link didn't work",
-    body: "Confirmation links expire and can only be used once. Register again to get a fresh one.",
-  },
-};
-
-export default async function SignInPage({ searchParams }: { searchParams: Promise<{ next?: string; notice?: string }> }) {
+export default async function SignInPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   if (await getSession()) redirect("/dashboard");
-  const { next, notice } = await searchParams;
+  const { next } = await searchParams;
 
   return (
     <AuthLayout
@@ -35,7 +21,7 @@ export default async function SignInPage({ searchParams }: { searchParams: Promi
         </AuthAside>
       }
     >
-      <SignInForm redirectTo={next} demoPassword={DEV_PASSWORD} notice={notice ? NOTICES[notice] : undefined} />
+      <SignInForm redirectTo={next} demoPassword={DEV_PASSWORD} />
     </AuthLayout>
   );
 }

@@ -6,15 +6,7 @@ import { Alert, Button, Checkbox, Field } from "@/components/ui";
 import { signInAction } from "@/lib/bff/actions";
 import { IDLE } from "@/lib/bff/action-state";
 
-export function SignInForm({
-  redirectTo,
-  demoPassword,
-  notice,
-}: {
-  redirectTo?: string;
-  demoPassword: string;
-  notice?: { tone: "success" | "danger"; title: string; body: string };
-}) {
+export function SignInForm({ redirectTo, demoPassword }: { redirectTo?: string; demoPassword: string }) {
   const [state, submit, pending] = useActionState(signInAction, IDLE);
 
   return (
@@ -22,17 +14,9 @@ export function SignInForm({
       <div>
         <h2 style={{ margin: 0, fontSize: 24, lineHeight: "32px", fontWeight: 700 }}>Sign in</h2>
         <p style={{ margin: "4px 0 0", color: "var(--ink-muted)", fontSize: 14 }}>
-          Use your work email. New accounts are approved by an admin.
+          Use your work email, or create an account if you do not have one yet.
         </p>
       </div>
-
-      {/* The notice comes from the confirmation link, so it survives the
-          redirect that brought the visitor back here. */}
-      {notice ? (
-        <Alert tone={notice.tone} title={notice.title}>
-          {notice.body}
-        </Alert>
-      ) : null}
 
       {state.status === "error" && state.message ? <Alert tone="danger" title={state.message} /> : null}
 
@@ -45,6 +29,7 @@ export function SignInForm({
         placeholder="name@company.lk"
         autoComplete="email"
         required
+        maxLength={160}
         defaultValue="admin@reservo.test"
         error={state.errors?.email}
       />

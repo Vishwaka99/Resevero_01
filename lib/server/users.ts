@@ -8,7 +8,6 @@ import type { AuthUser } from "@/lib/auth/session";
 import type { Role, User } from "@/lib/domain/types";
 import { createAdminClient, findIdentityByEmail } from "@/utils/supabase/admin";
 import { notFound, ruleViolation } from "./errors";
-import { notifyAccountApproved } from "./notify";
 
 export type UserRow = {
   user: User;
@@ -175,12 +174,6 @@ export async function setActive(actor: AuthUser, userId: string, isActive: boole
     });
     return row;
   });
-
-  // Only on the transition, and only after the write has committed: telling
-  // someone they are in, and then rolling back, would be worse than silence.
-  if (isActive && !user.isActive) {
-    await notifyAccountApproved({ name: updated.name, email: updated.email });
-  }
 
   return updated;
 }
