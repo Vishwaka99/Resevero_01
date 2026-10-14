@@ -21,11 +21,28 @@ body { font-family: var(--font-sans); color: var(--ink); background: var(--canva
 /* Logo */
 .rv-logo { display: inline-flex; align-items: center; gap: 10px; color: inherit; }
 .rv-logo-stacked { flex-direction: column; gap: 8px; }
-.rv-logo-word { font-family: var(--font-sans); font-weight: 700; letter-spacing: -0.03em; line-height: 1; }
+.rv-logo-word { flex: none; display: block; }
 .rv-logo-mark { flex: none; display: block; }
-.rv-logo-mark .rv-lg-bg { fill: var(--primary); }
-.rv-logo-mark .rv-lg-fg { fill: var(--on-primary); }
-.rv-logo-mark .rv-lg-ac { fill: var(--logo-accent); }
+/*
+ * The artwork has an opaque white ground, so every crop of it is a white
+ * rectangle. On a light surface that disappears; on a dark one it would be a
+ * slab with a logo in it.
+ *
+ * Filtering cannot fix that — `brightness(0) invert(1)` whitens the ground
+ * along with the lettering and leaves a solid block. So dark themes give the
+ * lockup a white plate to sit on instead, which is also how the template
+ * treats the logo where it sits over colour.
+ *
+ * Driven by inherited custom properties rather than a selector on :root,
+ * because a theme can be set partway down the tree — the auth pages pin
+ * themselves to light inside an app that may be dark, and a rule keyed on the
+ * root would still see dark there.
+ */
+.rv-logo {
+  background: var(--logo-plate, transparent);
+  padding: var(--logo-plate-pad, 0);
+  border-radius: 10px;
+}
 
 /* Button */
 .rv-btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); height: var(--control-height); padding: 0 var(--space-4); border-radius: var(--radius-md); border: 1px solid transparent; font: 600 13px/18px var(--font-sans); cursor: pointer; white-space: nowrap; transition: background .12s, border-color .12s; }
@@ -122,8 +139,25 @@ textarea.rv-input { height: auto; min-height: 88px; padding: var(--space-2) var(
 .rv-nav { display: flex; align-items: center; gap: var(--space-3); padding: 9px var(--space-3); border-radius: var(--radius-md); color: var(--ink); font: 500 14px/20px var(--font-sans); text-decoration: none; cursor: pointer; border: 0; background: none; width: 100%; text-align: left; }
 .rv-nav .rv-icon { color: var(--ink-muted); --icon-accent: var(--primary); }
 .rv-nav:hover { background: var(--surface-hover); }
-.rv-nav[aria-current="page"] { background: var(--primary-soft); color: var(--primary-ink); font-weight: 600; }
-.rv-nav[aria-current="page"] .rv-icon { color: var(--primary-ink); --icon-accent: var(--primary); }
+/*
+ * The active item is marked by a rule against the sidebar's edge and by
+ * colour, rather than by a filled pill. With eight or nine items a column of
+ * pills is a lot of weight for one bit of information.
+ */
+.rv-nav { position: relative; }
+.rv-nav[aria-current="page"] { background: none; color: var(--primary); font-weight: 600; }
+.rv-nav[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  left: calc(var(--space-3) * -1);
+  top: 50%;
+  translate: 0 -50%;
+  width: 3px;
+  height: 22px;
+  border-radius: 0 3px 3px 0;
+  background: var(--primary);
+}
+.rv-nav[aria-current="page"] .rv-icon { color: var(--primary); --icon-accent: var(--primary); }
 .rv-nav-count { margin-left: auto; font: 600 11px/18px var(--font-sans); min-width: 20px; height: 20px; padding: 0 6px; border-radius: var(--radius-pill); background: var(--warning-soft); color: var(--warning); text-align: center; }
 
 /* Avatar */

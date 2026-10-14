@@ -53,8 +53,27 @@ a.rv-btn-ghost:hover { color: var(--primary-ink); }
   --content-max: 1280px;
 }
 
-.rv-shell { display: flex; min-height: 100vh; background: var(--canvas); }
-.rv-shell-main { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; }
+/*
+ * The application sits on the page as one card rather than filling the
+ * window: a white panel on a tinted ground, with the sidebar and the bar
+ * inside it.
+ *
+ * `overflow: clip` rather than `hidden` is deliberate. Hidden would make the
+ * card a scroll container, and the sidebar and top bar inside it stick to
+ * that container instead of the viewport — they would scroll away.
+ */
+.rv-shell {
+  display: flex;
+  max-width: var(--shell-max);
+  margin: var(--space-6) auto;
+  min-height: calc(100vh - var(--space-6) * 2);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--shell-radius);
+  overflow: clip;
+  box-shadow: 0 10px 30px rgba(16, 24, 40, 0.06);
+}
+.rv-shell-main { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; background: var(--surface); }
 
 .rv-topbar {
   height: var(--topbar-height);
@@ -78,6 +97,8 @@ a.rv-btn-ghost:hover { color: var(--primary-ink); }
 }
 .rv-topbar-search { flex: 1 1 auto; max-width: 420px; }
 .rv-topbar-end { margin-left: auto; display: flex; align-items: center; gap: var(--space-2); }
+
+main { background: var(--surface); flex: 1 1 auto; }
 
 .rv-page {
   /* margin-inline is the fix for the obvious one: a max-width with no auto
@@ -123,7 +144,7 @@ a.rv-btn-ghost:hover { color: var(--primary-ink); }
 }
 
 /* Sidebar: the active item is decided by the router, not by markup */
-.rv-side { position: sticky; top: 0; height: 100vh; overflow-y: auto; flex: none; }
+.rv-side { position: sticky; top: 0; align-self: flex-start; max-height: 100vh; overflow-y: auto; flex: none; }
 .rv-side-rail-label { display: inline; }
 
 /* Bottom tab bar, phones only */
@@ -351,4 +372,78 @@ a.rv-btn-ghost:hover { color: var(--primary-ink); }
   *,
   *::before,
   *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
+
+/* ------------------------------------------------------------------ *
+ * Auth pages
+ *
+ * One centred card on a tinted page: the form on the left, where reading
+ * starts, and the panel on the right. Below 900px the card stacks, panel
+ * first, so a phone leads with the pitch and then the fields.
+ * ------------------------------------------------------------------ */
+
+.rv-auth-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: var(--space-6);
+  background: var(--canvas);
+  color: var(--ink);
+}
+.rv-auth-card {
+  display: flex;
+  width: 100%;
+  max-width: 1080px;
+  min-height: 620px;
+  background: var(--surface);
+  border-radius: var(--shell-radius);
+  overflow: clip;
+  box-shadow: 0 18px 48px rgba(16, 24, 40, 0.1);
+}
+.rv-auth-form {
+  flex: 1 1 440px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-12) var(--space-8);
+  box-sizing: border-box;
+}
+.rv-auth-brand { display: flex; justify-content: center; }
+
+.rv-auth-aside {
+  flex: 1 1 520px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-12) var(--space-8);
+  box-sizing: border-box;
+  background: var(--primary);
+  color: var(--on-primary);
+}
+.rv-auth-copy { max-width: 42ch; text-align: center; }
+.rv-auth-copy h1 { margin: 0 0 10px; font: 700 26px/34px var(--font-sans); letter-spacing: -0.02em; }
+.rv-auth-copy p { margin: 0; font-size: 15px; line-height: 23px; opacity: 0.88; }
+
+.rv-auth-art { width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 12px; }
+.rv-auth-art-row { display: flex; gap: 10px; }
+.rv-auth-art-row span { height: 14px; border-radius: 7px; background: var(--on-primary); }
+
+.rv-auth-dots { display: flex; gap: 8px; }
+.rv-auth-dots i { width: 7px; height: 7px; border-radius: var(--radius-pill); background: var(--on-primary); opacity: 0.4; }
+.rv-auth-dots i[data-active="true"] { opacity: 1; }
+
+@media (max-width: 900px) {
+  .rv-auth-card { flex-direction: column-reverse; min-height: 0; }
+  .rv-auth-form,
+  .rv-auth-aside { flex: 0 0 auto; padding: var(--space-8) var(--space-6); }
+  .rv-auth-art { max-width: 300px; }
+}
+
+@media (max-width: 560px) {
+  .rv-auth-page { padding: 0; }
+  .rv-auth-card { border-radius: 0; min-height: 100vh; box-shadow: none; }
 }

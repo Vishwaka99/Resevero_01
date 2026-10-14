@@ -15,37 +15,60 @@ export type LogoProps = {
 };
 
 /**
- * The "lanes" mark: three booking slots on a rounded square, the middle one
- * amber as the slot just reserved. It echoes the availability timeline.
+ * The Resevero lockup, cropped out of one artwork file.
+ *
+ * The source image is a wide canvas with the logo floating in the middle of
+ * it, so the mark and the word are each taken as a background crop at
+ * measured coordinates rather than shipped as two files. Both crops use the
+ * same vertical band, which is what keeps them on one baseline at any size.
+ *
+ * They stay two elements rather than one wide crop because the sidebar
+ * collapses to an icon rail and hides `.rv-logo-word` — a single image could
+ * not be told to drop half of itself.
  */
+const ARTWORK = { src: "/resevero-logo.webp", width: 1536, height: 1024 };
+const MARK_BOX = { x: 128, y: 343, width: 309, height: 288 };
+const WORD_BOX = { x: 477, y: 343, width: 934, height: 288 };
+/** Whitespace between the two in the artwork, kept so the gap scales too. */
+const ARTWORK_GAP = WORD_BOX.x - (MARK_BOX.x + MARK_BOX.width);
+
+type CropBox = { x: number; y: number; width: number; height: number };
+
+function crop(box: CropBox, renderedHeight: number) {
+  const scale = renderedHeight / box.height;
+  return {
+    width: Math.round(box.width * scale),
+    height: renderedHeight,
+    backgroundImage: `url(${ARTWORK.src})`,
+    backgroundSize: `${Math.round(ARTWORK.width * scale)}px ${Math.round(ARTWORK.height * scale)}px`,
+    backgroundPosition: `-${Math.round(box.x * scale)}px -${Math.round(box.y * scale)}px`,
+    backgroundRepeat: "no-repeat" as const,
+  };
+}
+
 export function Logo({ layout = "lockup", size = 32, className }: LogoProps) {
+  const isMarkOnly = layout === "mark";
   const mark = (
-    <svg
+    <span
       className="rv-logo-mark"
-      width={size}
-      height={size}
-      viewBox="0 0 64 64"
-      aria-hidden={layout === "mark" ? undefined : "true"}
-      role={layout === "mark" ? "img" : undefined}
-      aria-label={layout === "mark" ? "Reservo" : undefined}
-      dangerouslySetInnerHTML={{
-        __html:
-          '<rect class="rv-lg-bg" width="64" height="64" rx="18"/>' +
-          '<rect class="rv-lg-fg" x="14" y="16" width="24" height="9" rx="4.5"/>' +
-          '<rect class="rv-lg-ac" x="24" y="27.5" width="26" height="9" rx="4.5"/>' +
-          '<rect class="rv-lg-fg" x="14" y="39" width="12" height="9" rx="4.5" opacity=".45"/>' +
-          '<rect class="rv-lg-fg" x="30" y="39" width="20" height="9" rx="4.5"/>',
-      }}
+      style={crop(MARK_BOX, size)}
+      role={isMarkOnly ? "img" : undefined}
+      aria-label={isMarkOnly ? "Resevero" : undefined}
+      aria-hidden={isMarkOnly ? undefined : true}
     />
   );
 
-  if (layout === "mark") return mark;
+  if (isMarkOnly) return mark;
+
   return (
-    <span className={cx("rv-logo", layout === "stacked" && "rv-logo-stacked", className)}>
+    <span
+      className={cx("rv-logo", layout === "stacked" && "rv-logo-stacked", className)}
+      style={{ gap: Math.max(4, Math.round((ARTWORK_GAP * size) / MARK_BOX.height)) }}
+      role="img"
+      aria-label="Resevero"
+    >
       {mark}
-      <span className="rv-logo-word" style={{ fontSize: `${Math.round(size * 0.58)}px` }}>
-        Reservo
-      </span>
+      <span className="rv-logo-word" style={crop(WORD_BOX, size)} aria-hidden="true" />
     </span>
   );
 }
