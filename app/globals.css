@@ -71,7 +71,7 @@ a.rv-btn-ghost:hover { color: var(--primary-ink); }
   border: 1px solid var(--border);
   border-radius: var(--shell-radius);
   overflow: clip;
-  box-shadow: 0 10px 30px rgba(16, 24, 40, 0.06);
+  box-shadow: var(--shadow-card);
 }
 .rv-shell-main { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; background: var(--surface); }
 
@@ -183,17 +183,24 @@ main { background: var(--surface); flex: 1 1 auto; }
   padding: 0 calc(var(--space-8) + var(--space-1)) 0 var(--space-3);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
-  background: var(--surface);
+  background-color: var(--surface-sunken);
   color: var(--ink);
   font: 500 13px/18px var(--font-sans);
   cursor: pointer;
-  transition: border-color .12s, box-shadow .12s;
+  box-shadow: var(--shadow-inset);
+  transition: background-color .14s ease-out, border-color .14s ease-out, box-shadow .14s ease-out;
   background-image: var(--rv-chevron);
   background-repeat: no-repeat;
   background-position: right var(--space-3) center;
   background-size: 16px 16px;
 }
 .rv-select:hover:not(:disabled) { border-color: var(--primary); }
+.rv-select:focus {
+  outline: none;
+  background-color: var(--surface);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
 
 /*
  * The reveal button inside a password field. It sits on top of the input, so

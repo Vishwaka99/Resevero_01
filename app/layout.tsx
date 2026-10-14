@@ -1,18 +1,18 @@
 import type { Metadata, Viewport } from "next";
-import { JetBrains_Mono, Plus_Jakarta_Sans } from "next/font/google";
+import { JetBrains_Mono, Source_Sans_3 } from "next/font/google";
 
 import "./globals.css";
 
 /**
- * One family for the interface and one monospace for times, durations and
- * reservation codes, so columns of times line up. They are loaded through
+ * Source Sans 3 for the interface, per the design system, and JetBrains Mono
+ * for times, durations and reservation codes, so columns of times line up. They are loaded through
  * `next/font` and bound to the `--font-sans` / `--font-mono` design tokens.
  */
-const sans = Plus_Jakarta_Sans({
+const sans = Source_Sans_3({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "600", "700"],
   display: "swap",
-  variable: "--font-jakarta",
+  variable: "--font-source-sans",
 });
 
 const mono = JetBrains_Mono({
@@ -34,7 +34,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f4f6fb" },
+    { media: "(prefers-color-scheme: light)", color: "#f5f7fb" },
     { media: "(prefers-color-scheme: dark)", color: "#0d111c" },
   ],
 };
@@ -60,7 +60,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         className={`${sans.variable} ${mono.variable}`}
         style={{
           // Point the design tokens at the fonts next/font just loaded.
-          ["--font-sans" as string]: `var(--font-jakarta), ui-sans-serif, system-ui, sans-serif`,
+          ["--font-sans" as string]: `var(--font-source-sans), "Source Sans 3", ui-sans-serif, system-ui, sans-serif`,
           ["--font-mono" as string]: `var(--font-jetbrains), ui-monospace, Menlo, monospace`,
         }}
       >
