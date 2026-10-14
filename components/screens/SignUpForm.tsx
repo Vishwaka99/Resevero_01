@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 
-import { Alert, Button, Field } from "@/components/ui";
+import { Alert, Button, Field, PasswordField } from "@/components/ui";
 import { signUpAction } from "@/lib/bff/actions";
 import { IDLE } from "@/lib/bff/action-state";
 
@@ -54,10 +54,9 @@ export function SignUpForm() {
         maxLength={160}
         error={state.errors?.email}
       />
-      <Field
+      <PasswordField
         label="Password"
         name="password"
-        type="password"
         placeholder="••••••••"
         autoComplete="new-password"
         required
@@ -66,10 +65,9 @@ export function SignUpForm() {
         hint="At least 8 characters."
         error={state.errors?.password}
       />
-      <Field
+      <PasswordField
         label="Confirm password"
         name="confirmPassword"
-        type="password"
         placeholder="••••••••"
         autoComplete="new-password"
         required

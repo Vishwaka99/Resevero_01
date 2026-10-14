@@ -147,15 +147,21 @@ type FieldOwnProps = {
   variant?: "search";
   multiline?: boolean;
   className?: string;
+  /**
+   * A control pinned to the right inside the input — a reveal button, a unit,
+   * a clear cross. It sits inside the border, so the input reserves room for
+   * it rather than letting text run underneath.
+   */
+  trailing?: ReactNode;
 };
 
 export type FieldProps = FieldOwnProps &
   Omit<InputHTMLAttributes<HTMLInputElement> & TextareaHTMLAttributes<HTMLTextAreaElement>, keyof FieldOwnProps>;
 
-export function Field({ label, hint, error, icon, variant, multiline, className, id, required, ...rest }: FieldProps) {
+export function Field({ label, hint, error, icon, variant, multiline, className, id, required, trailing, ...rest }: FieldProps) {
   const fieldId = id ?? `rv-f-${rest.name ?? label?.toLowerCase().replace(/[^a-z0-9]+/g, "-") ?? "input"}`;
   const describedBy = hint || error ? `${fieldId}-hint` : undefined;
-  const inputClass = cx("rv-input", variant === "search" && "rv-input-search");
+  const inputClass = cx("rv-input", variant === "search" && "rv-input-search", Boolean(trailing) && "rv-input-trailing");
 
   const control = multiline ? (
     <textarea id={fieldId} required={required} aria-invalid={error ? "true" : undefined} aria-describedby={describedBy} className={inputClass} {...rest} />
@@ -175,10 +181,11 @@ export function Field({ label, hint, error, icon, variant, multiline, className,
           ) : null}
         </label>
       ) : null}
-      {icon ? (
+      {icon || trailing ? (
         <div className="rv-input-wrap">
-          <Icon name={icon} />
+          {icon ? <Icon name={icon} /> : null}
           {control}
+          {trailing}
         </div>
       ) : (
         control

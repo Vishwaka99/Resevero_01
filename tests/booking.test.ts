@@ -290,12 +290,21 @@ describe("approvals", () => {
 
   it("warns about a competing request without blocking the booking", async () => {
     const other = await asUser("kasun@reservo.test");
+    const slot = { resourceId: VAN, startsAt: at(day, "14:00"), endsAt: at(day, "16:00") };
+
+    // Measured as a difference rather than a total. The seed is built relative
+    // to today and already parks pending van requests a few days out, so on
+    // the dates where that lands on this Monday a fixed count is wrong — and
+    // it is wrong on the calendar, not in the code, which is a miserable way
+    // to lose an afternoon.
+    const before = await checkSlot(slot);
+
     await createReservation(other, { resourceId: VAN, title: "Supplier pickup", attendees: 2, startsAt: at(day, "13:00"), endsAt: at(day, "17:00") });
 
-    const check = await checkSlot({ resourceId: VAN, startsAt: at(day, "14:00"), endsAt: at(day, "16:00") });
-    expect(check.free).toBe(true);
-    expect(check.competing).toHaveLength(1);
-    expect(check.competing[0].title).toBe("Supplier pickup");
+    const after = await checkSlot(slot);
+    expect(after.free).toBe(true);
+    expect(after.competing).toHaveLength(before.competing.length + 1);
+    expect(after.competing.map((request) => request.title)).toContain("Supplier pickup");
   });
 
   it("refuses to approve a request whose slot was confirmed in the meantime", async () => {

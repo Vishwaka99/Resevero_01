@@ -1,4 +1,4 @@
-import { Logo, ThemeToggle } from "@/components/ui";
+import { Logo } from "@/components/ui";
 
 /**
  * The panel beside the sign-in and sign-up forms. Shared so the two pages are
@@ -49,17 +49,36 @@ export function AuthAside({ heading, children }: { heading: string; children: st
   );
 }
 
-/** The shell both auth pages sit in. */
+/**
+ * The shell both auth pages sit in.
+ *
+ * `data-theme="light"` pins these two pages to the light palette whatever the
+ * rest of the app is doing. The tokens are selected by that attribute rather
+ * than by `:root` alone, so redeclaring it here re-resolves every custom
+ * property for this subtree — a dark `<html>` stops at the door.
+ *
+ * `colorScheme` has to come with it, or the browser keeps drawing the parts
+ * it owns — the autofill background, the date and time pickers these forms
+ * use — in dark, against a light page.
+ *
+ * There is no theme switch here either: offering one on a page that cannot
+ * change theme would be a control that does nothing.
+ */
 export function AuthLayout({ aside, children }: { aside: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", minHeight: "100vh", background: "var(--canvas)", color: "var(--ink)" }}>
+    <div
+      data-theme="light"
+      style={{
+        colorScheme: "light",
+        display: "flex",
+        flexWrap: "wrap",
+        minHeight: "100vh",
+        background: "var(--canvas)",
+        color: "var(--ink)",
+      }}
+    >
       {aside}
-      <main style={{ position: "relative", flex: "1 1 480px", display: "grid", placeItems: "center", padding: "48px 24px", boxSizing: "border-box" }}>
-        {/* Someone arrives here before they are anywhere else, so the switch
-            has to exist before the app shell that normally carries it. */}
-        <div style={{ position: "absolute", top: 20, right: 20 }}>
-          <ThemeToggle />
-        </div>
+      <main style={{ flex: "1 1 480px", display: "grid", placeItems: "center", padding: "48px 24px", boxSizing: "border-box" }}>
         {children}
       </main>
     </div>

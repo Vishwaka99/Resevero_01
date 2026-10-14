@@ -173,6 +173,28 @@ a.rv-btn-ghost:hover { color: var(--primary-ink); }
   background-size: 16px 16px;
 }
 .rv-select:hover:not(:disabled) { border-color: var(--primary); }
+
+/*
+ * The reveal button inside a password field. It sits on top of the input, so
+ * the input reserves the width rather than letting characters run under it.
+ */
+.rv-input-trailing { padding-right: 44px; }
+.rv-reveal {
+  position: absolute;
+  right: 4px;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+.rv-reveal:hover { color: var(--ink); background: var(--surface-hover); }
+.rv-reveal[aria-pressed="true"] { color: var(--primary); }
 .rv-select:disabled { opacity: .5; cursor: not-allowed; }
 
 /*
