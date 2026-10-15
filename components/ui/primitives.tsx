@@ -15,60 +15,81 @@ export type LogoProps = {
 };
 
 /**
- * The Resevero lockup, cropped out of one artwork file.
+ * The Resevero lockup.
  *
- * The source image is a wide canvas with the logo floating in the middle of
- * it, so the mark and the word are each taken as a background crop at
- * measured coordinates rather than shipped as two files. Both crops use the
- * same vertical band, which is what keeps them on one baseline at any size.
+ * There are two artworks, one drawn for light grounds and one for dark, and
+ * each is a wide canvas with the logo somewhere inside it. So the mark and
+ * the word are taken as background crops at coordinates measured off each
+ * file rather than shipped as four images. Both crops of a file share its
+ * vertical band, which is what keeps them on one baseline at any size.
  *
- * They stay two elements rather than one wide crop because the sidebar
- * collapses to an icon rail and hides `.rv-logo-word` — a single image could
- * not be told to drop half of itself.
+ * Both artworks are rendered and CSS shows one. The choice cannot be made
+ * here: a theme can be set partway down the tree — the auth pages pin
+ * themselves to light inside an app that may be dark — so it is made by
+ * inherited custom properties, which resolve per subtree. Reading the theme
+ * in JavaScript would also mean guessing it on the server.
+ *
+ * Mark and word stay separate elements because the sidebar collapses to an
+ * icon rail and hides `.rv-logo-word`.
  */
-const ARTWORK = { src: "/resevero-logo.webp", width: 1536, height: 1024 };
-const MARK_BOX = { x: 128, y: 343, width: 309, height: 288 };
-const WORD_BOX = { x: 477, y: 343, width: 934, height: 288 };
-/** Whitespace between the two in the artwork, kept so the gap scales too. */
-const ARTWORK_GAP = WORD_BOX.x - (MARK_BOX.x + MARK_BOX.width);
-
 type CropBox = { x: number; y: number; width: number; height: number };
+type Artwork = { src: string; width: number; height: number; mark: CropBox; word: CropBox };
 
-function crop(box: CropBox, renderedHeight: number) {
+/** Coordinates measured off each file; see the note above. */
+const ARTWORK: Record<"light" | "dark", Artwork> = {
+  light: {
+    src: "/resevero-logo-light.png",
+    width: 1024,
+    height: 484,
+    mark: { x: 38, y: 118, width: 264, height: 249 },
+    word: { x: 323, y: 118, width: 672, height: 249 },
+  },
+  dark: {
+    src: "/resevero-logo-dark.png",
+    width: 1024,
+    height: 434,
+    mark: { x: 52, y: 92, width: 254, height: 252 },
+    word: { x: 320, y: 92, width: 655, height: 252 },
+  },
+};
+
+function crop(art: Artwork, box: CropBox, renderedHeight: number) {
   const scale = renderedHeight / box.height;
   return {
     width: Math.round(box.width * scale),
     height: renderedHeight,
-    backgroundImage: `url(${ARTWORK.src})`,
-    backgroundSize: `${Math.round(ARTWORK.width * scale)}px ${Math.round(ARTWORK.height * scale)}px`,
+    backgroundImage: `url(${art.src})`,
+    backgroundSize: `${Math.round(art.width * scale)}px ${Math.round(art.height * scale)}px`,
     backgroundPosition: `-${Math.round(box.x * scale)}px -${Math.round(box.y * scale)}px`,
     backgroundRepeat: "no-repeat" as const,
   };
 }
 
-export function Logo({ layout = "lockup", size = 32, className }: LogoProps) {
-  const isMarkOnly = layout === "mark";
-  const mark = (
-    <span
-      className="rv-logo-mark"
-      style={crop(MARK_BOX, size)}
-      role={isMarkOnly ? "img" : undefined}
-      aria-label={isMarkOnly ? "Resevero" : undefined}
-      aria-hidden={isMarkOnly ? undefined : true}
-    />
+/** The whitespace between mark and word in the artwork, scaled with it. */
+function lockupGap(art: Artwork, size: number) {
+  return Math.max(3, Math.round(((art.word.x - (art.mark.x + art.mark.width)) * size) / art.mark.height));
+}
+
+function Artboard({ theme, size, markOnly }: { theme: "light" | "dark"; size: number; markOnly: boolean }) {
+  const art = ARTWORK[theme];
+  return (
+    <span className={`rv-logo-art rv-logo-art-${theme}`} style={{ gap: lockupGap(art, size) }} aria-hidden="true">
+      <span className="rv-logo-mark" style={crop(art, art.mark, size)} />
+      {markOnly ? null : <span className="rv-logo-word" style={crop(art, art.word, size)} />}
+    </span>
   );
+}
 
-  if (isMarkOnly) return mark;
-
+export function Logo({ layout = "lockup", size = 32, className }: LogoProps) {
+  const markOnly = layout === "mark";
   return (
     <span
       className={cx("rv-logo", layout === "stacked" && "rv-logo-stacked", className)}
-      style={{ gap: Math.max(4, Math.round((ARTWORK_GAP * size) / MARK_BOX.height)) }}
       role="img"
       aria-label="Resevero"
     >
-      {mark}
-      <span className="rv-logo-word" style={crop(WORD_BOX, size)} aria-hidden="true" />
+      <Artboard theme="light" size={size} markOnly={markOnly} />
+      <Artboard theme="dark" size={size} markOnly={markOnly} />
     </span>
   );
 }

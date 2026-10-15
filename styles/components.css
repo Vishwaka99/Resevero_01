@@ -30,24 +30,25 @@ body { font-family: var(--font-sans); color: var(--ink); background: var(--canva
 }
 
 /* Logo */
-.rv-logo { display: inline-flex; align-items: center; gap: 10px; color: inherit; }
+.rv-logo { display: inline-flex; align-items: center; color: inherit; }
 .rv-logo-stacked { flex-direction: column; gap: 8px; }
 .rv-logo-word { flex: none; display: block; }
 .rv-logo-mark { flex: none; display: block; }
 /*
- * The artwork has an opaque white ground, so every crop of it is a white
- * rectangle. On a light surface that disappears; on a dark one it would be a
- * slab with a logo in it.
- *
- * Filtering cannot fix that — `brightness(0) invert(1)` whitens the ground
- * along with the lettering and leaves a solid block. So dark themes give the
- * lockup a white plate to sit on instead, which is also how the template
- * treats the logo where it sits over colour.
- *
- * Driven by inherited custom properties rather than a selector on :root,
- * because a theme can be set partway down the tree — the auth pages pin
- * themselves to light inside an app that may be dark, and a rule keyed on the
- * root would still see dark there.
+ * Both artworks are in the markup and the theme picks one. The switch is an
+ * inherited custom property, not a selector on :root, because a theme can be
+ * set partway down the tree: the auth pages pin themselves to light inside an
+ * app that may be dark, and a root-keyed rule would still see dark there.
+ */
+.rv-logo-art { align-items: center; }
+.rv-logo-art-light { display: var(--logo-art-light, inline-flex); }
+.rv-logo-art-dark { display: var(--logo-art-dark, none); }
+.rv-logo-stacked .rv-logo-art { flex-direction: column; }
+
+/*
+ * The dark artwork had its near-black ground keyed out, so it needs nothing
+ * behind it. The plate stays as a hook — the light artwork is still opaque
+ * white, which only disappears because the surfaces it sits on are white too.
  */
 .rv-logo {
   background: var(--logo-plate, transparent);
@@ -131,7 +132,13 @@ body { font-family: var(--font-sans); color: var(--ink); background: var(--canva
 textarea.rv-input { height: auto; min-height: 88px; padding: var(--space-2) var(--space-3); resize: vertical; }
 .rv-input-wrap { position: relative; display: flex; align-items: center; }
 .rv-input-wrap .rv-icon { position: absolute; left: var(--space-3); color: var(--ink-muted); pointer-events: none; }
-.rv-input-wrap .rv-input { padding-left: 40px; }
+/*
+ * Only a field with a LEADING icon gives up its left padding. The wrapper is
+ * also used for a trailing control — the password reveal — and indenting
+ * those by 40px pushed the text out of line with every other field in the
+ * form, as if an icon were sitting there.
+ */
+.rv-input-wrap > .rv-icon + .rv-input { padding-left: 40px; }
 .rv-input-search { background: var(--surface-sunken); border-color: transparent; }
 .rv-field-hint { font: 400 12px/16px var(--font-sans); color: var(--ink-muted); }
 .rv-field-error .rv-input { border-color: var(--danger); }
