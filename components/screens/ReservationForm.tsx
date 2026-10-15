@@ -5,6 +5,7 @@ import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, AvailabilityTimeline, Badge, Button, Card, Field, Icon } from "@/components/ui";
 import type { TimelineRow } from "@/components/ui";
 import { IDLE } from "@/lib/bff/action-state";
+import { conflictTitle, offersAlternatives } from "@/lib/bff/conflict-copy";
 import { createReservationAction, editReservationAction } from "@/lib/bff/actions";
 import type { AvailabilityAnswer, ReservationFormView } from "@/lib/bff/views";
 
@@ -69,7 +70,16 @@ export function ReservationForm({ view }: { view: ReservationFormView }) {
     };
   }, [values.resourceId, values.date, values.from, values.to, values.attendees, view.reservationId]);
 
-  const conflict = state.conflict ?? (availability.conflict ? { message: availability.conflict.message, suggestions: availability.suggestions, similarFree: availability.similarFree } : null);
+  const conflict =
+    state.conflict ??
+    (availability.conflict
+      ? {
+          reason: availability.conflict.reason,
+          message: availability.conflict.message,
+          suggestions: availability.suggestions,
+          similarFree: availability.similarFree,
+        }
+      : null);
   const blocked = Boolean(conflict) && !dismissed;
 
   const timelineRows: TimelineRow[] = view.timeline.rows.map((row) => ({
@@ -181,7 +191,7 @@ export function ReservationForm({ view }: { view: ReservationFormView }) {
             {blocked && conflict ? (
               <Alert
                 tone="danger"
-                title="That time isn't free"
+                title={conflictTitle(conflict.reason)}
                 actions={
                   <>
                     {conflict.suggestions.map((suggestion) => (
@@ -206,7 +216,13 @@ export function ReservationForm({ view }: { view: ReservationFormView }) {
                         {similar.name}
                       </button>
                     ))}
-                    {!conflict.suggestions.length && !conflict.similarFree.length ? (
+                    {/*
+                      Only worth saying when the slot really was taken. A
+                      booking refused for being too long, or for too many
+                      people, is not fixed by another day — the sentence above
+                      already says what to change.
+                    */}
+                    {offersAlternatives(conflict.reason) && !conflict.suggestions.length && !conflict.similarFree.length ? (
                       <span className="rv-muted" style={{ fontSize: 13 }}>
                         Nothing similar is free then. Try another day.
                       </span>
