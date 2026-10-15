@@ -1,10 +1,4 @@
-/**
- * Dashboard view model.
- *
- * One call gathers what would otherwise be five separate queries from the
- * browser: the next booking, two dials, today's timeline, what is free right
- * now, the approvals preview and this week's notices.
- */
+/** Dashboard view model. */
 
 import { getDataStore } from "@/lib/data";
 import type { AuthUser } from "@/lib/auth/session";

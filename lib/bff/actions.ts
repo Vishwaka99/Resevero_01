@@ -1,17 +1,6 @@
 "use server";
 
-/**
- * The BFF's write side.
- *
- * Every action does the same four things, in the same order:
- *   1. identify the caller and check the role,
- *   2. validate the input with Zod,
- *   3. call a domain service, which writes in a transaction with an audit row,
- *   4. revalidate the screens the write affects.
- *
- * Hiding a button is never the only check — an action called directly is
- * refused exactly like one called from the UI.
- */
+/** The BFF's write side. */
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";

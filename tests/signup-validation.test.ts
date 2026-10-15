@@ -2,17 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { fieldErrors, signUpInput } from "@/lib/bff/schemas";
 
-/**
- * The registration form's rules, pinned.
- *
- * The match check earns its own tests because it failed in a way that looked
- * like a bug in the comparison and was not: a refused submission used to
- * empty both password fields while leaving the rest filled, and a masked
- * empty field is indistinguishable from a full one, so the next attempt came
- * back "those passwords don't match" with nothing visibly wrong. The
- * comparison was always right. These say so, and the form keeps its values
- * now so the situation cannot arise.
- */
+/** The registration form's rules, pinned. */
 const valid = {
   name: "Nimal Perera",
   email: "nimal@company.lk",

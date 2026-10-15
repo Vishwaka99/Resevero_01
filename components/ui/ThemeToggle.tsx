@@ -4,20 +4,7 @@ import { useSyncExternalStore } from "react";
 
 import { Icon } from "./Icon";
 
-/**
- * Light/dark switch.
- *
- * The stylesheet already follows the system preference, so this exists only to
- * override it. That shapes the storage: nothing is written until someone
- * actually chooses, so a visitor who never touches this keeps following their
- * system even if it changes mid-session.
- *
- * The theme is read through `useSyncExternalStore` rather than held in state.
- * It lives in the browser — in storage and in a media query — and this is the
- * API for rendering from something React does not own: no effect that sets
- * state on mount, no hydration mismatch, and a system change while the page is
- * open is picked up as it happens.
- */
+/** Light/dark switch. */
 const STORAGE_KEY = "rv-theme";
 const QUERY = "(prefers-color-scheme: dark)";
 

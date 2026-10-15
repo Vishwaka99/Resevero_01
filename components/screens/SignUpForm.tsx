@@ -6,17 +6,7 @@ import { Alert, Button, Field, PasswordField } from "@/components/ui";
 import { signUpAction } from "@/lib/bff/actions";
 import { IDLE } from "@/lib/bff/action-state";
 
-/**
- * There is no success branch: registering signs the person in and the action
- * redirects, so the only thing this has to render well is a refusal — which
- * means keeping what was typed. Both passwords are deliberately not carried
- * back; they are short to retype and should not survive a round trip.
- *
- * The browser-level constraints below are a convenience, not the check. Every
- * one of them is also in `signUpInput`, which is what actually decides —
- * anything arriving at a server action has not necessarily been through this
- * form.
- */
+/** There is no success branch: registering signs the person in and the action redirects, so the only thing this has to render well is a refusal — which means keeping what was typed. */
 export function SignUpForm() {
   const [state, submit, pending] = useActionState(signUpAction, IDLE);
 

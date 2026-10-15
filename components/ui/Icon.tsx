@@ -1,9 +1,4 @@
-/**
- * Reservo icon set — drawn on a 24px grid. Each entry is [line, accent]:
- * a 2px round-capped line in the text colour, plus one solid accent shape.
- * On filled grounds the accent switches to currentColor via CSS, so nothing
- * disappears on a primary button or inside a badge.
- */
+/** Reservo icon set — drawn on a 24px grid. */
 const ICONS = {
   dashboard: [
     '<rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="5" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/>',

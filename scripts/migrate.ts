@@ -1,12 +1,4 @@
-/**
- * Applies the SQL files in supabase/migrations, in filename order, once each.
- *
- *   npm run db:migrate
- *
- * Applied migrations are recorded in `schema_migrations`, so running it again
- * is a no-op. Each file runs inside a transaction: either the whole migration
- * lands or none of it does.
- */
+/** Applies the SQL files in supabase/migrations, in filename order, once each. */
 
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";

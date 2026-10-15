@@ -1,11 +1,4 @@
-/**
- * Data ports — the only shape the domain services know about.
- *
- * Two adapters implement this: `lib/data/memory` and `lib/data/postgres`
- * (Supabase). No service changes when one is swapped for the other. Anything that must be enforced by the database is
- * expressed here as an intent (`createGuarded`, `runInTransaction`) rather than
- * as a raw write, so the adapter can map it to a constraint or a transaction.
- */
+/** Data ports — the only shape the domain services know about. */
 
 import type {
   AuditLog,
@@ -95,30 +88,13 @@ export interface ReservationRepository {
   findByCode(code: string): Promise<ReservationWithRelations | null>;
   list(filter: ReservationFilter): Promise<ReservationWithRelations[]>;
 
-  /**
-   * Inserts only if the slot is still free. The in-memory adapter serialises
-   * the check per resource; the Postgres adapter relies on
-   * `EXCLUDE USING gist (resource_id WITH =, tstzrange(starts_at, ends_at, '[)') WITH &&)
-   *  WHERE (status = 'confirmed')`
-   * so two writes in the same millisecond cannot both win.
-   *
-   * Note the scope: only a *confirmed* reservation holds a slot. A pending
-   * one is a bid, so several may exist for the same time.
-   */
+  /** Inserts only if the slot is still free. */
   createGuarded(input: NewReservation): Promise<GuardedInsert>;
 
   /** Moves a reservation to a new slot under the same no-overlap guard. */
   rescheduleGuarded(id: string, startsAt: Date, endsAt: Date, patch?: Partial<Pick<Reservation, "title" | "attendees">>): Promise<GuardedInsert>;
 
-  /**
-   * Confirms a pending request under that same guard.
-   *
-   * Approving is the moment a slot is actually claimed, so it needs the same
-   * protection as inserting one. Checking for a clash and then updating is
-   * two steps, and two admins deciding competing requests at once can both
-   * pass the check; this makes the claim atomic, exactly as `createGuarded`
-   * does for a new booking.
-   */
+  /** Confirms a pending request under that same guard. */
   confirmGuarded(id: string, patch: Pick<Reservation, "decidedBy" | "decidedAt" | "decisionNote">): Promise<GuardedInsert>;
 
   update(id: string, patch: Partial<Omit<Reservation, "id" | "code" | "createdAt">>): Promise<Reservation>;

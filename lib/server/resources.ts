@@ -1,11 +1,4 @@
-/**
- * ResourceService — the admin side of the catalogue: add a resource, change its
- * rules, block time for maintenance, retire it.
- *
- * Changing a rule never silently cancels bookings. Instead the service reports
- * the reservations that no longer fit the new rules, and the screen shows them
- * so an admin can decide what to do.
- */
+/** ResourceService — the admin side of the catalogue: add a resource, change its rules, block time for maintenance, retire it. */
 
 import { getDataStore } from "@/lib/data";
 import type { AuthUser } from "@/lib/auth/session";
@@ -163,11 +156,7 @@ export type BlockTimeResult = {
   cancelled: ReservationWithRelations[];
 };
 
-/**
- * Blocks a maintenance window. Anything already booked inside it is cancelled
- * with the reason, because the resource genuinely will not be available —
- * leaving the bookings in place would be the dishonest option.
- */
+/** Blocks a maintenance window. */
 export async function blockTime(actor: AuthUser, input: BlockTimeInput, now: Date = new Date()): Promise<BlockTimeResult> {
   const store = getDataStore();
   const resource = await store.resources.findById(input.resourceId);

@@ -39,11 +39,7 @@ const LEGEND: Array<[string, string]> = [
   ["Maintenance", "slot-blocked"],
 ];
 
-/**
- * Resource rows × hour columns. Availability is drawn, not listed: free lanes
- * are sunken, other people's bookings are grey, yours are cobalt, pending is
- * dashed amber and maintenance is hatched.
- */
+/** Resource rows × hour columns. */
 export function AvailabilityTimeline({
   rows,
   startHour = 8,

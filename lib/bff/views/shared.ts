@@ -1,8 +1,4 @@
-/**
- * Pieces every view model shares: the navigation, status mapping and the small
- * display shapes the components expect. Formatting lives here, never in a
- * component, so a time looks the same on every screen.
- */
+/** Pieces every view model shares: the navigation, status mapping and the small display shapes the components expect. */
 
 import type { AuthUser } from "@/lib/auth/session";
 import type { IconName } from "@/components/ui/Icon";

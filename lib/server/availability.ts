@@ -1,13 +1,4 @@
-/**
- * AvailabilityService — the one place that answers "is this slot free, and if
- * not, what else is?".
- *
- * Two layers protect against double-booking:
- *   1. this service, which checks before the write so the user gets an
- *      explanation and alternatives instead of an error, and
- *   2. the guarded insert in the data adapter, which has the final say even if
- *      two people submit in the same millisecond.
- */
+/** AvailabilityService — the one place that answers "is this slot free, and if not, what else is?". */
 
 import { getDataStore } from "@/lib/data";
 import { needsApproval as requiresApproval } from "./approval-policy";
@@ -69,11 +60,7 @@ export type AvailabilityCheck = {
   free: boolean;
   /** True when the resource is configured to need an admin decision. */
   needsApproval: boolean;
-  /**
-   * Pending requests from other people for the same time. The slot is still
-   * bookable — an admin will choose between the requests — but the user should
-   * know they are not the only one asking.
-   */
+  /** Pending requests from other people for the same time. */
   competing: ReservationWithRelations[];
   reason?: ConflictReason;
   /** One sentence naming the clash, in the product's voice. */

@@ -1,13 +1,6 @@
 import { Logo } from "@/components/ui";
 
-/**
- * The panel beside the auth forms.
- *
- * It carries the pitch, not the branding: the lockup sits above the form on
- * the other side, which is where someone's eye starts. Content is centred and
- * stacked — a decorative band, the line, the supporting sentence — so the two
- * halves of the card balance rather than one being top-heavy.
- */
+/** The panel beside the auth forms. */
 export function AuthAside({ heading, children }: { heading: string; children: string }) {
   return (
     <aside className="rv-auth-aside">
@@ -45,17 +38,7 @@ export function AuthAside({ heading, children }: { heading: string; children: st
   );
 }
 
-/**
- * The shell both auth pages sit in: one centred card, form on the left and
- * the panel on the right.
- *
- * `data-theme="light"` pins these pages to the light palette whatever the
- * rest of the app is doing. The tokens are selected by that attribute rather
- * than by `:root` alone, so redeclaring it here re-resolves every custom
- * property for this subtree — a dark `<html>` stops at the door. `colorScheme`
- * has to come with it, or the browser keeps drawing the parts it owns — the
- * autofill background, the date and time pickers — dark against a light page.
- */
+/** The shell both auth pages sit in: one centred card, form on the left and the panel on the right. */
 export function AuthLayout({ aside, children }: { aside: React.ReactNode; children: React.ReactNode }) {
   return (
     <div data-theme="light" style={{ colorScheme: "light" }} className="rv-auth-page">

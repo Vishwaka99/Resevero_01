@@ -4,11 +4,7 @@ import { ZodError } from "zod";
 import { isDomainError, statusForCode } from "@/lib/server/errors";
 import { fieldErrors } from "./schemas";
 
-/**
- * One wrapper for every BFF route handler: it runs the builder, turns domain
- * failures and validation errors into the right status code, and keeps the
- * response shape identical across endpoints.
- */
+/** One wrapper for every BFF route handler: it runs the builder, turns domain failures and validation errors into the right status code, and keeps the response shape identical across endpoints. */
 export async function bffRoute<T>(build: () => Promise<T>): Promise<NextResponse> {
   try {
     const data = await build();

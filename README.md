@@ -50,8 +50,8 @@ Requires Node 20.9+ (developed on Node 24).
 
 ```bash
 npm install
-cp .env.example .env.local
-# Fill in the three Supabase values in .env.local before signing in — see below.
+# Create .env.local with the settings from Environment, below. Sign-in needs
+# the three Supabase ones even on the in-memory adapter.
 npm run dev
 ```
 
@@ -533,8 +533,9 @@ workaround.
 `SESSION_SECRET` is gone: there is no longer an application-signed cookie to
 sign. Supabase issues and verifies the tokens.
 
-`.env.example` has the shape of each; real values go in `.env.local`, which is
-not committed.
+Put real values in `.env.local`, which is not committed and has no example in
+the repository — nothing about this project's configuration belongs in version
+control.
 
 ---
 

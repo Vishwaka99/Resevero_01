@@ -99,12 +99,7 @@ describe("creating a reservation", () => {
     expect(back_to_back.ok).toBe(true);
   });
 
-  /**
-   * The guarantee the whole product rests on: the pre-flight check can be
-   * raced, so the write itself has to be the one that refuses. In Postgres
-   * this is the exclusion constraint; in the in-memory adapter it is a
-   * per-resource lock. Either way, exactly one of these may win.
-   */
+  /** The guarantee the whole product rests on: the pre-flight check can be raced, so the write itself has to be the one that refuses. */
   it("lets two people ask for the same slot, since a request is a bid", async () => {
     const member = await asUser(MEMBER_EMAIL);
     const admin = await asUser(ADMIN_EMAIL);
@@ -283,11 +278,7 @@ describe("approvals", () => {
     await expect(approveReservation(admin, request.reservation.id, null)).rejects.toThrow(/already been decided/i);
   });
 
-  /**
-   * A pending request is a bid, not a hold: two people may ask for the same
-   * van, and the admin chooses. If pending locked the slot, the second person
-   * could never put their case and this feature would be dead code.
-   */
+  /** A pending request is a bid, not a hold: two people may ask for the same van, and the admin chooses. */
   it("lets two people ask for the same slot on a resource that needs approval", async () => {
     const member = await asUser(MEMBER_EMAIL);
     const other = await asUser("kasun@reservo.test");
