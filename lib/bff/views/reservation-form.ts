@@ -1,10 +1,4 @@
-/**
- * New reservation and edit reservation.
- *
- * The form asks the BFF for availability as the user types, so a clash shows up
- * with alternatives before anything is submitted. `Reserve` stays disabled
- * while a clash stands.
- */
+/** New reservation and edit reservation. */
 
 import { getDataStore } from "@/lib/data";
 import type { AuthUser } from "@/lib/auth/session";

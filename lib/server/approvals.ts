@@ -1,12 +1,4 @@
-/**
- * ApprovalService — the admin decision on a request for a resource that needs
- * sign-off.
- *
- * Approving is the interesting case: once a request is confirmed, any other
- * pending request for the same resource and time can no longer succeed, so they
- * are rejected in the same transaction and their requesters are told why. That
- * is the behaviour the approvals screen promises.
- */
+/** ApprovalService — the admin decision on a request for a resource that needs sign-off. */
 
 import { getDataStore } from "@/lib/data";
 import type { AuthUser } from "@/lib/auth/session";

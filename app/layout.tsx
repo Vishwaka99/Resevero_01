@@ -3,11 +3,7 @@ import { JetBrains_Mono, Source_Sans_3 } from "next/font/google";
 
 import "./globals.css";
 
-/**
- * Source Sans 3 for the interface, per the design system, and JetBrains Mono
- * for times, durations and reservation codes, so columns of times line up. They are loaded through
- * `next/font` and bound to the `--font-sans` / `--font-mono` design tokens.
- */
+/** Source Sans 3 for the interface, per the design system, and JetBrains Mono for times, durations and reservation codes, so columns of times line up. */
 const sans = Source_Sans_3({
   subsets: ["latin"],
   weight: ["400", "600", "700"],
@@ -44,12 +40,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     // The script below writes to <html>, which the server did not render.
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/*
-          Runs before the first paint, so a stored choice is applied without
-          the page flashing the other theme first. It sets nothing when there
-          is no stored choice: the stylesheet's prefers-color-scheme rule is
-          already right, and writing an attribute here would override it.
-        */}
+        {/* Runs before the first paint, so a stored choice is applied without the page flashing the other theme first. */}
         <script
           dangerouslySetInnerHTML={{
             __html: `try{var t=localStorage.getItem("rv-theme");if(t==="dark"||t==="light")document.documentElement.dataset.theme=t}catch(e){}`,

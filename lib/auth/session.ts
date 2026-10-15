@@ -7,18 +7,7 @@ import { forbidden, unauthenticated } from "@/lib/server/errors";
 import { createAdminClient, findIdentityByEmail } from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
 
-/**
- * Session handling, on Supabase Auth.
- *
- * Supabase owns the credential and the tokens; the cookies it sets are read
- * and refreshed through `@supabase/ssr`. What it does *not* own is the role:
- * that is read from this application's `users` table on every request, so
- * demoting or deactivating someone takes effect immediately instead of waiting
- * for their access token to expire.
- *
- * So a signed-in request resolves in two steps: Supabase says which identity
- * is calling, and the `users` table says what that identity may do.
- */
+/** Session handling, on Supabase Auth. */
 
 async function client() {
   return createClient(await cookies());
@@ -45,18 +34,7 @@ async function toAuthUser(user: User): Promise<AuthUser> {
   };
 }
 
-/**
- * The profile a Supabase identity maps to.
- *
- * Normally that is a straight lookup on the link column. The email fallback
- * covers a profile created before the identity existed — an account invited by
- * an admin, or a database seeded ahead of its auth users. It is read-only:
- * writing the link is `signIn`'s job, so that rendering a page never writes.
- *
- * A profile already linked to a *different* identity is refused rather than
- * matched on email, so registering a second Supabase account with someone's
- * address cannot borrow their role.
- */
+/** The profile a Supabase identity maps to. */
 async function profileFor(authUserId: string, email: string | null | undefined): Promise<User | null> {
   const store = getDataStore();
 
@@ -69,35 +47,7 @@ async function profileFor(authUserId: string, email: string | null | undefined):
   return byEmail;
 }
 
-/**
- * Resolving the signed-in user, once per request.
- *
- * Two things made this slow. It ran on every call — the app layout, the page,
- * and the admin layout on top of that — and each run asked Supabase over the
- * network. Three round trips, one after another, before a page could start
- * rendering.
- *
- * `cache` collapses them into one for the request. And the check itself is
- * now local: `getClaims` verifies the token's signature against the project's
- * public keys, which the client fetches once and keeps, instead of asking the
- * auth server who this is.
- *
- * What that gives up is worth stating exactly. `getUser` asks Supabase, so a
- * session revoked mid-flight is refused at once; a signature check trusts the
- * token until it expires. The proxy still calls `getUser`, so a revoked
- * session is caught on the next page navigation — but its matcher does not
- * cover `/api/bff`, so a BFF call in between is verified locally and would
- * go through until the access token runs out.
- *
- * What does *not* lag is authority: role and active state are read from the
- * database on every request, below, so demoting or deactivating someone takes
- * effect on their very next call, API routes included. It is only the
- * session's own revocation that waits.
- *
- * One caveat that comes with caching: a session changed *during* a request —
- * signing in or out — is not reflected by a later call in that same request.
- * Both of those redirect immediately, so nothing reads a stale answer.
- */
+/** Resolves the signed-in user once per request, verifying the token locally rather than asking Supabase. */
 const resolveSession = cache(async (): Promise<AuthUser | null> => {
   const { data, error } = await (await client()).auth.getClaims();
   if (error || !data?.claims) return null;
@@ -171,22 +121,7 @@ export async function signIn(email: string, password: string): Promise<SignInRes
 
 export type SignUpResult = { ok: true } | { ok: false; message: string; field?: "email" | "password" };
 
-/**
- * Registration.
- *
- * The account is usable the moment it is made: the identity is created
- * already confirmed, the profile is active, and the caller is signed in with
- * the password they just chose. Nothing is emailed and nothing is approved.
- *
- * That is a deliberate trade, and worth being clear about: no one proves they
- * own the address they register, so an address alone is not evidence of
- * anything here. Deactivation on the Users screen is the only gate left, and
- * it is applied after the fact rather than before.
- *
- * Creating the identity goes through the service-role key rather than the
- * public signUp endpoint, so that the result does not depend on whether the
- * project happens to have email confirmation switched on.
- */
+/** Registration. */
 export async function signUp(input: { name: string; email: string; password: string }): Promise<SignUpResult> {
   const email = input.email.trim().toLowerCase();
   const store = getDataStore();

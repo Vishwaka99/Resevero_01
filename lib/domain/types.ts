@@ -1,9 +1,4 @@
-/**
- * Domain entities, one per table in the ER diagram.
- *
- * Instants are `Date` objects here and `timestamptz` in Postgres: stored in UTC,
- * displayed in the organisation's timezone (see `lib/domain/time.ts`).
- */
+/** Domain entities, one per table in the ER diagram. */
 
 export type Role = "admin" | "member";
 
@@ -11,18 +6,7 @@ export type ResourceStatus = "active" | "maintenance" | "retired";
 
 export type ReservationStatus = "pending" | "confirmed" | "rejected" | "cancelled" | "completed";
 
-/**
- * Only a confirmed reservation owns a slot, and so takes part in the overlap
- * guard that makes double-booking impossible.
- *
- * A pending request is a bid, not a hold. Resources that need approval — the
- * vans, the auditorium — are exactly the ones several people ask for at once,
- * and the admin's job is to choose between them: approving one rejects the
- * others. If a pending request locked the slot, the first person to ask would
- * silently win and nobody else could even put their case. Pending requests are
- * still drawn on the timeline, dashed, so the competition is visible, and the
- * booking form warns about them.
- */
+/** Only a confirmed reservation owns a slot, and so takes part in the overlap guard that makes double-booking impossible. */
 export const BLOCKING_STATUSES: ReservationStatus[] = ["confirmed"];
 
 /** States that are competing for a slot without owning it. */
@@ -47,11 +31,7 @@ export type User = {
   id: string;
   name: string;
   email: string;
-  /**
-   * The Supabase Auth identity this profile signs in with, or null for a
-   * profile that has never been linked to one. The credential itself lives in
-   * Supabase; the role below does not, so that revoking it is immediate.
-   */
+  /** The Supabase Auth identity this profile signs in with, or null for a profile that has never been linked to one. */
   authUserId: string | null;
   role: Role;
   departmentId: string | null;

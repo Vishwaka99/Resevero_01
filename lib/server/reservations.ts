@@ -1,9 +1,4 @@
-/**
- * ReservationService — create, edit, cancel, check in, and release no-shows.
- *
- * Every write runs inside a transaction together with its audit row and the
- * notifications it causes, so the log can never drift from the data.
- */
+/** ReservationService — create, edit, cancel, check in, and release no-shows. */
 
 import { getDataStore } from "@/lib/data";
 import type { AuthUser } from "@/lib/auth/session";
@@ -312,13 +307,7 @@ export async function checkIn(actor: AuthUser, id: string, now: Date = new Date(
 
 /* --------------------------------------------------- housekeeping sweeps */
 
-/**
- * Releases rooms nobody claimed and closes reservations that have finished.
- *
- * Reservo has no scheduler yet, so this runs at the start of every BFF read.
- * It is idempotent, which is what makes that safe. Moving it to a cron job is a
- * one-line change once the database is in place.
- */
+/** Releases rooms nobody claimed and closes reservations that have finished. */
 export async function settleOverdue(now: Date = new Date()): Promise<{ released: number; completed: number }> {
   const store = getDataStore();
   const stale = await store.reservations.list({ statuses: ["confirmed", "pending"], to: now });

@@ -1,10 +1,6 @@
 import type { Interval } from "./types";
 
-/**
- * Every instant is stored in UTC and displayed in the organisation's timezone.
- * Keeping that single conversion point here means the rest of the app never
- * does ad-hoc date maths, which is where booking bugs usually come from.
- */
+/** Every instant is stored in UTC and displayed in the organisation's timezone. */
 export const ORG_TIME_ZONE = process.env.ORG_TIME_ZONE ?? "Asia/Colombo";
 
 const HH_MM = new Intl.DateTimeFormat("en-GB", {
@@ -206,11 +202,7 @@ export function durationMinutes({ start, end }: Interval): number {
 
 /* ------------------------------------------------------------- intervals */
 
-/**
- * Half-open overlap test, the same rule as the Postgres exclusion constraint:
- * `tstzrange(starts_at, ends_at, '[)') &&`. A booking that ends at 11:00 and
- * one that starts at 11:00 do not clash.
- */
+/** Half-open overlap test, the same rule as the Postgres exclusion constraint: `tstzrange(starts_at, ends_at, '[)') &&`. */
 export function overlaps(a: Interval, b: Interval): boolean {
   return a.start < b.end && b.start < a.end;
 }

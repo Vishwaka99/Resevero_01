@@ -1,11 +1,4 @@
-/**
- * Development seed.
- *
- * Dates are built relative to "today" in the organisation's timezone, so the
- * dashboard, timeline and approvals queue look alive on whatever day the app is
- * opened. `scripts/seed.ts` loads this same data into Supabase, so both
- * adapters show the same application and there is one place to change it.
- */
+/** Development seed. */
 
 import { addDaysISO, fromLocal, localToday, localWeekday, startOfLocalDay } from "@/lib/domain/time";
 import type {
@@ -35,11 +28,7 @@ export type Tables = {
   codeCounter: number;
 };
 
-/**
- * The shared dev password for every seeded account. It is set on the Supabase
- * identity by `npm run db:seed`, not stored here — this is only the value the
- * seeder uses and the sign-in form shows.
- */
+/** The shared dev password for every seeded account. */
 export const DEV_PASSWORD = "reservo123";
 
 const MON_TO_FRI = [1, 2, 3, 4, 5];
@@ -55,11 +44,7 @@ function isWeekday(dayISO: string): boolean {
   return weekday >= 1 && weekday <= 5;
 }
 
-/**
- * The nth working day from an anchor, skipping weekends. Rooms are bookable
- * Mon-Fri, so anchoring the seed to working days keeps the demo data on days
- * the resources are actually open, whichever day the app is opened on.
- */
+/** The nth working day from an anchor, skipping weekends. */
 function businessDay(anchorISO: string, offset: number): string {
   let cursor = anchorISO;
   let remaining = Math.abs(offset);
@@ -351,11 +336,7 @@ export function buildSeed(now: Date = new Date()): Tables {
     };
   };
 
-  /**
-   * Four weeks of history, so the reports have something real to measure.
-   * It is generated from a fixed table rather than at random, so every run
-   * produces the same numbers and a demo is repeatable.
-   */
+  /** Four weeks of history, so the reports have something real to measure. */
   const HISTORY_PATTERN: Array<{ resourceId: string; userId: string; title: string; from: string; to: string; weekdays: number[] }> = [
     // Board Room A is the room everyone wants; the reports should show that.
     { resourceId: "res-board-a", userId: "usr-kasun", title: "Finance sync", from: "09:00", to: "10:30", weekdays: [1, 3] },

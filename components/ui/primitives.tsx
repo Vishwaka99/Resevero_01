@@ -14,24 +14,7 @@ export type LogoProps = {
   className?: string;
 };
 
-/**
- * The Resevero lockup.
- *
- * There are two artworks, one drawn for light grounds and one for dark, and
- * each is a wide canvas with the logo somewhere inside it. So the mark and
- * the word are taken as background crops at coordinates measured off each
- * file rather than shipped as four images. Both crops of a file share its
- * vertical band, which is what keeps them on one baseline at any size.
- *
- * Both artworks are rendered and CSS shows one. The choice cannot be made
- * here: a theme can be set partway down the tree — the auth pages pin
- * themselves to light inside an app that may be dark — so it is made by
- * inherited custom properties, which resolve per subtree. Reading the theme
- * in JavaScript would also mean guessing it on the server.
- *
- * Mark and word stay separate elements because the sidebar collapses to an
- * icon rail and hides `.rv-logo-word`.
- */
+/** The Resevero lockup. */
 type CropBox = { x: number; y: number; width: number; height: number };
 type Artwork = { src: string; width: number; height: number; mark: CropBox; word: CropBox };
 
@@ -191,11 +174,7 @@ type FieldOwnProps = {
   variant?: "search";
   multiline?: boolean;
   className?: string;
-  /**
-   * A control pinned to the right inside the input — a reveal button, a unit,
-   * a clear cross. It sits inside the border, so the input reserves room for
-   * it rather than letting text run underneath.
-   */
+  /** A control pinned to the right inside the input — a reveal button, a unit, a clear cross. */
   trailing?: ReactNode;
 };
 

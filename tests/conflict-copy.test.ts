@@ -4,14 +4,7 @@ import { conflictTitle, offersAlternatives } from "@/lib/bff/conflict-copy";
 import { buildAvailabilityAnswer } from "@/lib/bff/views";
 import { at, BOARD_ROOM_A, freshStore, nextMonday } from "./helpers";
 
-/**
- * A refusal has to be framed by its own reason.
- *
- * This exists because of a real report: a booking that ran past the
- * resource's limit came back headed "that time isn't free", followed by
- * "nothing similar is free then, try another day". Both were false. The time
- * was free; the booking was too long, and no other day would have helped.
- */
+/** A refusal has to be framed by its own reason. */
 describe("framing a refusal", () => {
   beforeEach(async () => {
     await freshStore();

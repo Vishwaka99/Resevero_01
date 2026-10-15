@@ -1,17 +1,4 @@
-/**
- * In-memory data adapter.
- *
- * It implements `DataStore` exactly as the PostgreSQL adapter in
- * `lib/data/postgres` does, including the two things the database is
- * responsible for:
- *
- *  - `createGuarded` / `rescheduleGuarded` refuse to write a slot that is
- *    already taken. Here that is a per-resource promise chain, which serialises
- *    concurrent attempts the way the exclusion constraint will.
- *  - `runInTransaction` brackets a write and its audit row.
- *
- * The data lives on `globalThis` so it survives Next.js hot reloads in dev.
- */
+/** In-memory data adapter. */
 
 import { BLOCKING_STATUSES } from "@/lib/domain/types";
 import { overlaps } from "@/lib/domain/time";

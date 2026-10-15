@@ -1,10 +1,4 @@
-/**
- * Browse resources and resource detail.
- *
- * Browse answers one question — "what can I book for this time?" — so each card
- * carries a status for the asked window, a day bar and the next free time,
- * rather than a list of bookings.
- */
+/** Browse resources and resource detail. */
 
 import { getDataStore } from "@/lib/data";
 import type { AuthUser } from "@/lib/auth/session";

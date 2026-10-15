@@ -1,21 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import type { cookies } from "next/headers";
 
-/**
- * Supabase client for server components and route handlers.
- *
- * Note on how this project uses Supabase: the PostgREST API reached through
- * this client is **not** the data path. Every table has row-level security
- * enabled with no policies, so this client can read nothing — deliberately,
- * because the publishable key below ships to the browser.
- *
- * The application's data goes over a direct Postgres connection instead, which
- * is the only way to get the transactions and the exclusion-constraint error
- * that `lib/data/ports.ts` is built around. See `lib/data/postgres/`.
- *
- * This client is here for the Supabase features that are reached over HTTP —
- * Auth, Storage, Realtime — if any of them are adopted later.
- */
+/** Supabase client for server components and route handlers. */
 export function createClient(cookieStore: Awaited<ReturnType<typeof cookies>>) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;

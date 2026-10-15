@@ -50,13 +50,7 @@ export const BOARD_ROOM_A = "res-board-a";
 /** Toyota Van: needs an admin's approval. */
 export const VAN = "res-van";
 
-/**
- * A booking that actually holds its slot.
- *
- * Every reservation now starts as a request, and only a confirmed one blocks
- * the time — so a test that needs an occupied slot has to approve it. This is
- * create-then-approve, which is the real path a held booking takes.
- */
+/** A booking that actually holds its slot. */
 export async function booked(
   email: string,
   input: { resourceId: string; title: string; attendees: number; startsAt: Date; endsAt: Date },

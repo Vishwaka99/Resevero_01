@@ -1,10 +1,4 @@
-/**
- * Input validation for the BFF.
- *
- * Nothing reaches a domain service without passing through one of these. The
- * same schemas validate query strings on route handlers and `FormData` in
- * server actions, so a hand-crafted request is checked exactly like the form.
- */
+/** Input validation for the BFF. */
 
 import { z } from "zod";
 
@@ -22,11 +16,7 @@ export function toMinutes(hhmm: string): number {
 
 export const viewMode = z.enum(["full", "compact"]).default("full");
 
-/**
- * An HTML checkbox sends `on` when ticked and nothing when cleared, so plain
- * boolean coercion would read the string "false" as true. This reads both the
- * browser's convention and an explicit JSON boolean.
- */
+/** An HTML checkbox sends `on` when ticked and nothing when cleared, so plain boolean coercion would read the string "false" as true. */
 export const checkbox = z.preprocess((value) => {
   if (value === undefined || value === null || value === "") return false;
   if (typeof value === "boolean") return value;
@@ -109,11 +99,7 @@ export const signInInput = z.object({
   redirectTo: z.string().startsWith("/").optional(),
 });
 
-/**
- * Self-registration. Only a name, an address and a password: the role, the
- * department and whether the account is active are not the registrant's to
- * choose, so they are not in the form.
- */
+/** Self-registration. */
 export const signUpInput = z
   .object({
     name: z

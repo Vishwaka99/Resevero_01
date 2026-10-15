@@ -5,11 +5,7 @@ import { getSession } from "@/lib/auth/session";
 import { getDataStore } from "@/lib/data";
 import { navSections, tabBarItems } from "@/lib/bff/views/shared";
 
-/**
- * Everything behind sign-in shares this shell. The session is re-read here
- * rather than trusted from middleware, and the sidebar is built from the
- * user's role, so a member never receives the admin links at all.
- */
+/** Everything behind sign-in shares this shell. */
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await getSession();
   if (!user) redirect("/sign-in");

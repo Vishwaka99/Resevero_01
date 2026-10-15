@@ -9,14 +9,7 @@ import { conflictTitle, offersAlternatives } from "@/lib/bff/conflict-copy";
 import { createReservationAction, editReservationAction } from "@/lib/bff/actions";
 import type { AvailabilityAnswer, ReservationFormView } from "@/lib/bff/views";
 
-/**
- * Booking, with the conflict check running while the user types.
- *
- * The rule from the design is "prevent conflicts, don't just report them": the
- * form asks the BFF after every change, draws the slot on the timeline, and
- * keeps `Reserve` disabled while a clash stands — offering the nearest free
- * times and similar free resources as one-tap alternatives.
- */
+/** Booking, with the conflict check running while the user types. */
 export function ReservationForm({ view }: { view: ReservationFormView }) {
   const isEdit = view.mode === "edit";
   const [state, submit, pending] = useActionState(isEdit ? editReservationAction : createReservationAction, IDLE);
@@ -216,12 +209,7 @@ export function ReservationForm({ view }: { view: ReservationFormView }) {
                         {similar.name}
                       </button>
                     ))}
-                    {/*
-                      Only worth saying when the slot really was taken. A
-                      booking refused for being too long, or for too many
-                      people, is not fixed by another day — the sentence above
-                      already says what to change.
-                    */}
+                    {/* Only worth saying when the slot really was taken. */}
                     {offersAlternatives(conflict.reason) && !conflict.suggestions.length && !conflict.similarFree.length ? (
                       <span className="rv-muted" style={{ fontSize: 13 }}>
                         Nothing similar is free then. Try another day.

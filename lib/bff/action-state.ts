@@ -6,12 +6,7 @@
 import type { FieldErrors } from "./schemas";
 
 export type ConflictInfo = {
-  /**
-   * Why the booking was refused. The form needs it because only some of these
-   * are about the time being taken: telling someone their booking is too long
-   * under the heading "that time isn't free" sends them looking for a free
-   * slot that was never the problem.
-   */
+  /** Why the booking was refused. */
   reason: string;
   message: string;
   suggestions: Array<{ label: string; from: string; to: string; date: string }>;

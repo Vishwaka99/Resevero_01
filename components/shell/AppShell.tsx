@@ -8,11 +8,7 @@ import { Avatar, Button, Field, Icon, Logo, ThemeToggle } from "@/components/ui"
 import { signOutAction } from "@/lib/bff/actions";
 import type { NavItem, NavSection } from "@/lib/bff/views/shared";
 
-/**
- * The desktop shell: a 248px sidebar and a 64px top bar. Below 1200px the
- * sidebar becomes an icon rail; below 768px it is replaced by a bottom tab bar.
- * The active item comes from the router, so no page has to declare it.
- */
+/** The desktop shell: a 248px sidebar and a 64px top bar. */
 export function AppShell({
   nav,
   tabBar,

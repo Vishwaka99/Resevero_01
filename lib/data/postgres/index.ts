@@ -1,22 +1,4 @@
-/**
- * PostgreSQL data adapter (Supabase).
- *
- * It implements the same `DataStore` as the in-memory adapter, so nothing in
- * `lib/server`, `lib/bff`, `app/` or `components/` knows which one is running.
- *
- * Two things are the database's job here, not the application's:
- *
- *   - `createGuarded` / `rescheduleGuarded` let the write attempt happen and
- *     catch the exclusion-constraint violation (23P01). That is what makes
- *     double-booking impossible even when two requests pass the pre-flight
- *     check in the same millisecond.
- *   - `runInTransaction` opens a real transaction, so a write and its audit
- *     row commit together or not at all.
- *
- * Columns are snake_case in the database and camelCase in the domain. Rather
- * than a magic transform, every query aliases its columns explicitly, so what
- * a row looks like is readable at the query.
- */
+/** PostgreSQL data adapter (Supabase). */
 
 import { BLOCKING_STATUSES } from "@/lib/domain/types";
 import type {
@@ -73,12 +55,7 @@ type ReservationRow = Reservation & {
 
 /* --------------------------------------------------------- column lists */
 
-/**
- * Column lists, aliased to the camelCase names the domain uses. They contain
- * no user input — only column names — so embedding them with `sql.unsafe` is
- * safe, and keeping them in one place stops the aliases drifting between
- * queries.
- */
+/** Column lists, aliased to the camelCase names the domain uses. */
 const COLUMNS = {
   user: `
     id,
@@ -358,11 +335,7 @@ const resources: ResourceRepository = {
   },
 };
 
-/**
- * Turns a partial domain patch into the snake_cased row the driver expects for
- * a dynamic UPDATE, keeping only the fields actually supplied. Leaving a field
- * out of the patch leaves the column alone; setting it to null clears it.
- */
+/** Turns a partial domain patch into the snake_cased row the driver expects for a dynamic UPDATE, keeping only the fields actually supplied. */
 function columnsFor<T extends object>(patch: T, mapping: Partial<Record<keyof T, string>>): Record<string, never> {
   const row: Record<string, unknown> = {};
   for (const [key, column] of Object.entries(mapping) as Array<[keyof T, string]>) {
@@ -415,11 +388,7 @@ const reservations: ReservationRepository = {
     return hydrate(rows);
   },
 
-  /**
-   * The slot guard. The pre-flight check in AvailabilityService has already
-   * run, but it can be raced, so this simply attempts the insert: the
-   * exclusion constraint decides, and a 23P01 means somebody else won.
-   */
+  /** The slot guard. */
   async createGuarded(input: NewReservation): Promise<GuardedInsert> {
     const sql = db();
 
@@ -564,11 +533,7 @@ const reservations: ReservationRepository = {
     return hydrate(rows);
   },
 
-  /**
-   * Codes come from a database sequence, claimed at insert by the column
-   * default. This exists for the port, and hands out the next one the same way
-   * so the two can never collide.
-   */
+  /** Codes come from a database sequence, claimed at insert by the column default. */
   async nextCode() {
     const sql = db();
     const [row] = await sql<{ code: string }[]>`select 'RSV-' || nextval('reservation_code_seq') as code`;

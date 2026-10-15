@@ -1,12 +1,7 @@
 @import "../styles/tokens.css";
 @import "../styles/components.css";
 
-/* ------------------------------------------------------------------ *
- * App shell — sidebar + top bar, per the Reservo layout rules:
- * 248px sidebar, 64px top bar, 1280px content column.
- * < 1200px the sidebar becomes a 72px icon rail.
- * < 768px it becomes a bottom tab bar and controls grow to 48px.
- * ------------------------------------------------------------------ */
+/* App shell — sidebar + top bar, per the Reservo layout rules: 248px sidebar, 64px top bar, 1280px content column. */
 
 *,
 *::before,
@@ -27,15 +22,7 @@ body {
 a { color: var(--primary); }
 a:hover { color: var(--primary-hover); }
 
-/*
- * A link styled as a button is not a link for colour purposes.
- *
- * `a:hover` above is (0,1,1) and beats `.rv-btn-primary` at (0,1,0), so
- * hovering a LinkButton repainted its label in --primary-hover — the same
- * colour the button's own hover puts behind it. "New reservation" went
- * invisible under the cursor. Restoring the variant's colour here, at a
- * specificity that wins, is narrower than weakening the link rule.
- */
+/* A link styled as a button is not a link for colour purposes. */
 a.rv-btn:hover { color: inherit; }
 a.rv-btn-primary,
 a.rv-btn-primary:hover { color: var(--on-primary); }
@@ -53,15 +40,7 @@ a.rv-btn-ghost:hover { color: var(--primary-ink); }
   --content-max: 1280px;
 }
 
-/*
- * The application sits on the page as one card rather than filling the
- * window: a white panel on a tinted ground, with the sidebar and the bar
- * inside it.
- *
- * `overflow: clip` rather than `hidden` is deliberate. Hidden would make the
- * card a scroll container, and the sidebar and top bar inside it stick to
- * that container instead of the viewport — they would scroll away.
- */
+/* The application sits on the page as one card rather than filling the window: a white panel on a tinted ground, with the sidebar and the bar inside it. */
 .rv-shell {
   display: flex;
   max-width: var(--shell-max);
@@ -144,16 +123,7 @@ main { background: var(--surface); flex: 1 1 auto; }
 }
 
 /* Sidebar: the active item is decided by the router, not by markup */
-/*
- * `align-self: flex-start` here left the nav as tall as its own items, so on
- * a short page its ground and edge stopped partway down the card and the
- * column did not line up with the content beside it. A flex item stretches by
- * default, which is what the chrome wants.
- *
- * Sticky then moves inside. The column is given the card's own minimum height
- * so the sign-out block still lands at the bottom, and capped at the viewport
- * so there is somewhere for it to stick to on a long page.
- */
+/* `align-self: flex-start` here left the nav as tall as its own items, so on a short page its ground and edge stopped partway down the card and the column did not line up with the content beside it. */
 .rv-side { flex: none; }
 .rv-side-inner {
   position: sticky;
@@ -179,19 +149,7 @@ main { background: var(--surface); flex: 1 1 auto; }
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
 }
-/*
- * Selects.
- *
- * `appearance: none` is the whole difference. Without it every platform draws
- * its own control, and a filter bar becomes a row of mismatched widgets next
- * to inputs that do match. With it they share the inputs' height, radius and
- * border, and the chevron below is ours.
- *
- * That chevron is a mask rather than a background image, so it takes its
- * colour from `background-color` and follows the theme on its own. A data-URI
- * image would bake in a hex that needs a second declaration for dark, which is
- * exactly the kind of thing that gets forgotten.
- */
+/* Selects. */
 .rv-select {
   appearance: none;
   -webkit-appearance: none;
@@ -262,19 +220,7 @@ main { background: var(--surface); flex: 1 1 auto; }
 .rv-segmented [aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-card); }
 
 /* Resource cards on Browse */
-/*
- * Browse resources, as rows rather than a grid of cards.
- *
- * The page answers "what is free, and when?", and a three-up grid of cards
- * answered it three times over in three different places: a reader comparing
- * two rooms had to hop between tiles, each with its own little bar. One column
- * of rows puts every availability bar in the same place on the page, so the
- * eye runs down them.
- *
- * The bars are not a shared axis, though, and the labels on each row say so:
- * resources keep their own opening hours, so two bars can cover different
- * spans. Drawing one axis across the top would be tidier and would lie.
- */
+/* Browse resources, as rows rather than a grid of cards. */
 .rv-res-list { display: flex; flex-direction: column; }
 .rv-res-row {
   display: grid;
@@ -399,13 +345,7 @@ main { background: var(--surface); flex: 1 1 auto; }
   *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
 }
 
-/* ------------------------------------------------------------------ *
- * Auth pages
- *
- * One centred card on a tinted page: the form on the left, where reading
- * starts, and the panel on the right. Below 900px the card stacks, panel
- * first, so a phone leads with the pitch and then the fields.
- * ------------------------------------------------------------------ */
+/* Auth pages One centred card on a tinted page: the form on the left, where reading starts, and the panel on the right. */
 
 .rv-auth-page {
   min-height: 100vh;

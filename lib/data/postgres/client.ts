@@ -1,17 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import postgres from "postgres";
 
-/**
- * The Postgres connection, and the transaction context the repositories read.
- *
- * `DataStore.runInTransaction(work)` takes a callback with no arguments, so
- * the repositories have to find the open transaction some other way. They read
- * it from async context: `runInTransaction` puts the transaction's connection
- * into an `AsyncLocalStorage`, and every query goes through `db()`, which
- * returns that connection when one is open and the pool otherwise. A write and
- * its audit row therefore land together without any of the services having to
- * pass a handle around.
- */
+/** The Postgres connection, and the transaction context the repositories read. */
 
 /** The connection handle, exactly as the driver infers it. */
 export type Sql = ReturnType<typeof postgres>;
@@ -81,11 +71,7 @@ export function inTransaction(): boolean {
   return transactionContext.getStore() !== undefined;
 }
 
-/**
- * Runs `work` inside a transaction. Nested calls join the transaction already
- * open rather than starting a second one, so a service that calls another
- * service still commits once.
- */
+/** Runs `work` inside a transaction. */
 export async function runInTransaction<T>(work: () => Promise<T>): Promise<T> {
   const open = transactionContext.getStore();
   if (open) return work();

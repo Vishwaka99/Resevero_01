@@ -6,11 +6,7 @@ import { Alert, Button, Field } from "@/components/ui";
 import { IDLE } from "@/lib/bff/action-state";
 import { approveAction, cancelReservationAction, checkInAction, rejectAction } from "@/lib/bff/actions";
 
-/**
- * Small write affordances shared by several screens. Each is a form posting to
- * a server action, so they work without JavaScript and report their result in
- * the same place.
- */
+/** Small write affordances shared by several screens. */
 
 export function CheckInButton({ id, block, size }: { id: string; block?: boolean; size?: "sm" }) {
   const [state, submit, pending] = useActionState(checkInAction, IDLE);

@@ -1,20 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-/**
- * Two jobs, in this order.
- *
- * It refreshes the Supabase session. Access tokens are short-lived, and a
- * server component cannot write cookies, so something that *can* has to rotate
- * them — otherwise a user is signed out the moment their token expires. This is
- * that something.
- *
- * Then it keeps signed-out visitors off the app pages. That part is a
- * convenience, not the security: Next's own documentation warns that a matcher
- * change or a moved server function can silently remove proxy coverage, so
- * every BFF route and server action calls `requireUser()` / `requireAdmin()`
- * and does not trust having been behind this.
- */
+/** Refreshes the Supabase session, then keeps signed-out visitors off the app pages. */
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 

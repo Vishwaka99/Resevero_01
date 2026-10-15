@@ -1,27 +1,9 @@
-/**
- * Reconciling the demo accounts' Supabase identities.
- *
- * Shared by `db:seed`, which needs the ids to write `users.auth_user_id`, and
- * by `auth:seed`, which creates the identities on their own for the in-memory
- * adapter — that one has no database to seed, but sign-in still goes through
- * Supabase and still needs somebody to sign in as.
- */
+/** Reconciling the demo accounts' Supabase identities. */
 
 import { DEV_PASSWORD } from "../lib/data/memory/seed";
 import { createAdminClient } from "../utils/supabase/admin";
 
-/**
- * Gives every seeded profile a Supabase identity and returns the ids, keyed by
- * email.
- *
- * Truncating `users` does not touch `auth.users`, so re-seeding meets the
- * identities it made last time. Those are reused and their password is reset
- * to DEV_PASSWORD, which keeps re-seeding repeatable without orphaning the
- * accounts people are already signed in to.
- *
- * Identities are confirmed on creation: nobody is going to click a link for a
- * demo account, and an unconfirmed one cannot sign in with a password.
- */
+/** Gives every seeded profile a Supabase identity and returns the ids, keyed by email. */
 export async function syncAuthIdentities(emails: string[]): Promise<Map<string, string>> {
   const admin = createAdminClient();
   const byEmail = new Map<string, string>();

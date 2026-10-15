@@ -1,17 +1,4 @@
-/**
- * Loads the development seed into Supabase.
- *
- *   npm run db:seed
- *
- * It reuses `buildSeed()` — the same data the in-memory adapter starts from —
- * so the two adapters show the same application, and there is one place to
- * change the demo data. The seed is built relative to today, so the dashboard
- * and approvals queue look alive whenever it is run.
- *
- * It clears the tables first, so running it again gives a clean, repeatable
- * state. It refuses to run against a database that is not obviously a
- * development one unless --force is passed.
- */
+/** Loads the development seed into Supabase. */
 
 import { createHash } from "node:crypto";
 
@@ -21,12 +8,7 @@ import { syncAuthIdentities } from "./identities";
 
 const force = process.argv.includes("--force");
 
-/**
- * The seed identifies rows by readable slugs ("res-board-a"), which is a help
- * when debugging the in-memory adapter. Postgres keys are uuids, so each slug
- * is hashed into one, the same way every time. Deterministic means re-seeding
- * produces identical ids and the relations between rows survive the move.
- */
+/** The seed identifies rows by readable slugs ("res-board-a"), which is a help when debugging the in-memory adapter. */
 const uuidCache = new Map<string, string>();
 
 function uuid(slug: string | null): string | null {

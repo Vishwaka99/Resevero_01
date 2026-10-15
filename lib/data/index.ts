@@ -1,16 +1,7 @@
 import type { DataStore } from "./ports";
 import { memoryStore } from "./memory";
 
-/**
- * The single place that decides which adapter the app runs on.
- *
- * Both implement the same `DataStore`, so nothing above this line — no
- * service, no view model, no component — knows or cares which is in use.
- *
- *   memory    the seeded in-memory store. Needs no setup, resets on restart.
- *   postgres  Supabase, over a direct Postgres connection. Needs DATABASE_URL
- *             and a database that has had supabase/migrations applied.
- */
+/** The single place that decides which adapter the app runs on. */
 export type DataAdapterName = "memory" | "postgres";
 
 export function dataAdapterName(): DataAdapterName {
