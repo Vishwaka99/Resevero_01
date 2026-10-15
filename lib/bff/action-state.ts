@@ -6,6 +6,13 @@
 import type { FieldErrors } from "./schemas";
 
 export type ConflictInfo = {
+  /**
+   * Why the booking was refused. The form needs it because only some of these
+   * are about the time being taken: telling someone their booking is too long
+   * under the heading "that time isn't free" sends them looking for a free
+   * slot that was never the problem.
+   */
+  reason: string;
   message: string;
   suggestions: Array<{ label: string; from: string; to: string; date: string }>;
   similarFree: Array<{ id: string; name: string; label: string }>;
@@ -17,7 +24,7 @@ export type ActionState = {
   message?: string;
   /** Field-level validation messages, keyed by input name. */
   errors?: FieldErrors;
-  /** Present when a write was refused because the slot was taken. */
+  /** Present when a write was refused by the availability check. */
   conflict?: ConflictInfo;
   /**
    * What was typed, so a refused form can be rendered with it still in place

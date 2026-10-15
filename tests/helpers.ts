@@ -1,4 +1,6 @@
 import type { AuthUser } from "@/lib/auth/session";
+import { approveReservation } from "@/lib/server/approvals";
+import { createReservation } from "@/lib/server/reservations";
 import { getDataStore } from "@/lib/data";
 import { resetMemoryStore } from "@/lib/data/memory";
 import { fromLocal, localToday, localWeekday, startOfLocalDay, addDaysISO } from "@/lib/domain/time";
@@ -47,3 +49,23 @@ export const MEMBER_EMAIL = "member@reservo.test";
 export const BOARD_ROOM_A = "res-board-a";
 /** Toyota Van: needs an admin's approval. */
 export const VAN = "res-van";
+
+/**
+ * A booking that actually holds its slot.
+ *
+ * Every reservation now starts as a request, and only a confirmed one blocks
+ * the time — so a test that needs an occupied slot has to approve it. This is
+ * create-then-approve, which is the real path a held booking takes.
+ */
+export async function booked(
+  email: string,
+  input: { resourceId: string; title: string; attendees: number; startsAt: Date; endsAt: Date },
+) {
+  const requester = await asUser(email);
+  const requested = await createReservation(requester, input);
+  if (!requested.ok) throw new Error(`the request itself was refused: ${requested.check.message}`);
+
+  const admin = await asUser(ADMIN_EMAIL);
+  const decided = await approveReservation(admin, requested.reservation.id, null);
+  return decided.reservation;
+}

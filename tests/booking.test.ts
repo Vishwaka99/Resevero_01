@@ -6,7 +6,7 @@ import { approveReservation, listApprovalQueue, rejectReservation } from "@/lib/
 import { blockTime } from "@/lib/server/resources";
 import { getDataStore } from "@/lib/data";
 import { addMinutes } from "@/lib/domain/time";
-import { ADMIN_EMAIL, asUser, at, BOARD_ROOM_A, freshStore, MEMBER_EMAIL, nextMonday, VAN } from "./helpers";
+import { ADMIN_EMAIL, asUser, at, BOARD_ROOM_A, booked, freshStore, MEMBER_EMAIL, nextMonday, VAN } from "./helpers";
 
 let day: string;
 
@@ -16,8 +16,9 @@ beforeEach(async () => {
 });
 
 describe("creating a reservation", () => {
-  it("confirms straight away when the resource needs no approval", async () => {
+  it("starts every booking as a request, whatever the resource", async () => {
     const member = await asUser(MEMBER_EMAIL);
+    // Board Room A is not flagged as needing approval; the policy is.
     const result = await createReservation(member, {
       resourceId: BOARD_ROOM_A,
       title: "Design review",
@@ -28,8 +29,12 @@ describe("creating a reservation", () => {
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.reservation.status).toBe("confirmed");
+    expect(result.reservation.status).toBe("pending");
     expect(result.reservation.code).toMatch(/^RSV-\d+$/);
+
+    // and it reaches the people who can decide it
+    const queue = await listApprovalQueue();
+    expect(queue.some((item) => item.reservation.id === result.reservation.id)).toBe(true);
   });
 
   it("waits for approval when the resource is set to need it", async () => {
@@ -49,14 +54,14 @@ describe("creating a reservation", () => {
 
   it("refuses an overlapping slot and names the clash", async () => {
     const member = await asUser(MEMBER_EMAIL);
-    const first = await createReservation(member, {
+    // Only an approved booking holds the slot, so this one is approved.
+    await booked(MEMBER_EMAIL, {
       resourceId: BOARD_ROOM_A,
       title: "Finance sync",
       attendees: 4,
       startsAt: at(day, "09:00"),
       endsAt: at(day, "10:30"),
     });
-    expect(first.ok).toBe(true);
 
     const second = await createReservation(member, {
       resourceId: BOARD_ROOM_A,
@@ -100,40 +105,48 @@ describe("creating a reservation", () => {
    * this is the exclusion constraint; in the in-memory adapter it is a
    * per-resource lock. Either way, exactly one of these may win.
    */
-  it("lets only one of two simultaneous bookings for the same slot win", async () => {
+  it("lets two people ask for the same slot, since a request is a bid", async () => {
     const member = await asUser(MEMBER_EMAIL);
     const admin = await asUser(ADMIN_EMAIL);
 
     const [a, b] = await Promise.all([
-      createReservation(member, {
-        resourceId: BOARD_ROOM_A,
-        title: "Member booking",
-        attendees: 2,
-        startsAt: at(day, "13:00"),
-        endsAt: at(day, "14:00"),
-      }),
-      createReservation(admin, {
-        resourceId: BOARD_ROOM_A,
-        title: "Admin booking",
-        attendees: 2,
-        startsAt: at(day, "13:00"),
-        endsAt: at(day, "14:00"),
-      }),
+      createReservation(member, { resourceId: BOARD_ROOM_A, title: "Member booking", attendees: 2, startsAt: at(day, "13:00"), endsAt: at(day, "14:00") }),
+      createReservation(admin, { resourceId: BOARD_ROOM_A, title: "Admin booking", attendees: 2, startsAt: at(day, "13:00"), endsAt: at(day, "14:00") }),
     ]);
 
-    expect([a.ok, b.ok].filter(Boolean)).toHaveLength(1);
+    expect([a.ok, b.ok].filter(Boolean)).toHaveLength(2);
+    // Neither holds it: nothing is confirmed until an admin decides.
+    expect(await getDataStore().reservations.findOverlapping(BOARD_ROOM_A, at(day, "13:00"), at(day, "14:00"))).toHaveLength(0);
+  });
 
-    const held = await getDataStore().reservations.findOverlapping(BOARD_ROOM_A, at(day, "13:00"), at(day, "14:00"));
-    expect(held).toHaveLength(1);
+  it("lets only one of two simultaneous approvals for the same slot win", async () => {
+    const member = await asUser(MEMBER_EMAIL);
+    const admin = await asUser(ADMIN_EMAIL);
+
+    const [a, b] = await Promise.all([
+      createReservation(member, { resourceId: BOARD_ROOM_A, title: "Member booking", attendees: 2, startsAt: at(day, "13:00"), endsAt: at(day, "14:00") }),
+      createReservation(admin, { resourceId: BOARD_ROOM_A, title: "Admin booking", attendees: 2, startsAt: at(day, "13:00"), endsAt: at(day, "14:00") }),
+    ]);
+    if (!a.ok || !b.ok) throw new Error("both requests should have been accepted");
+
+    // Two admins deciding competing requests at the same instant. The claim
+    // is guarded, so exactly one can take the slot.
+    const decided = await Promise.allSettled([
+      approveReservation(admin, a.reservation.id, null),
+      approveReservation(admin, b.reservation.id, null),
+    ]);
+
+    expect(decided.filter((d) => d.status === "fulfilled")).toHaveLength(1);
+    expect(await getDataStore().reservations.findOverlapping(BOARD_ROOM_A, at(day, "13:00"), at(day, "14:00"))).toHaveLength(1);
   });
 
   it("skips the dates of a repeat where the slot is already taken", async () => {
-    const admin = await asUser(ADMIN_EMAIL);
     const member = await asUser(MEMBER_EMAIL);
     const nextWeek = new Date(at(day, "15:00").getTime() + 7 * 24 * 60 * 60 * 1000);
 
-    // Someone already holds the same slot one week later.
-    await createReservation(admin, {
+    // Someone already holds the same slot one week later — approved, so it
+    // actually blocks.
+    await booked(ADMIN_EMAIL, {
       resourceId: BOARD_ROOM_A,
       title: "Board meeting",
       attendees: 8,
@@ -341,16 +354,15 @@ describe("approvals", () => {
 describe("cancelling, check-in and release", () => {
   it("frees the slot when a reservation is cancelled", async () => {
     const member = await asUser(MEMBER_EMAIL);
-    const booking = await createReservation(member, {
+    const booking = await booked(MEMBER_EMAIL, {
       resourceId: BOARD_ROOM_A,
       title: "Design review",
       attendees: 4,
       startsAt: at(day, "09:00"),
       endsAt: at(day, "10:00"),
     });
-    if (!booking.ok) throw new Error("setup failed");
 
-    await cancelReservation(member, booking.reservation.id, "Moved to a call");
+    await cancelReservation(member, booking.id, "Moved to a call");
 
     const sameSlot = await createReservation(member, {
       resourceId: BOARD_ROOM_A,
@@ -380,51 +392,47 @@ describe("cancelling, check-in and release", () => {
 
   it("refuses a check-in before the window opens", async () => {
     const member = await asUser(MEMBER_EMAIL);
-    const booking = await createReservation(member, {
+    const booking = await booked(MEMBER_EMAIL, {
       resourceId: BOARD_ROOM_A,
       title: "Design review",
       attendees: 4,
       startsAt: at(day, "15:00"),
       endsAt: at(day, "16:00"),
     });
-    if (!booking.ok) throw new Error("setup failed");
 
-    await expect(checkIn(member, booking.reservation.id)).rejects.toThrow(/Check-in opens/i);
+    await expect(checkIn(member, booking.id)).rejects.toThrow(/Check-in opens/i);
   });
 
   it("accepts a check-in inside the window", async () => {
     const member = await asUser(MEMBER_EMAIL);
-    const booking = await createReservation(member, {
+    const booking = await booked(MEMBER_EMAIL, {
       resourceId: BOARD_ROOM_A,
       title: "Design review",
       attendees: 4,
       startsAt: at(day, "15:00"),
       endsAt: at(day, "16:00"),
     });
-    if (!booking.ok) throw new Error("setup failed");
 
     const fiveMinutesIn = addMinutes(at(day, "15:00"), 5);
-    const checked = await checkIn(member, booking.reservation.id, fiveMinutesIn);
+    const checked = await checkIn(member, booking.id, fiveMinutesIn);
     expect(checked?.checkedInAt).not.toBeNull();
   });
 
   it("releases a room nobody claimed, and lets someone else take the slot", async () => {
     const store = getDataStore();
-    const member = await asUser(MEMBER_EMAIL);
-    const booking = await createReservation(member, {
+    const booking = await booked(MEMBER_EMAIL, {
       resourceId: BOARD_ROOM_A,
       title: "Design review",
       attendees: 4,
       startsAt: at(day, "15:00"),
       endsAt: at(day, "16:00"),
     });
-    if (!booking.ok) throw new Error("setup failed");
 
     const twentyMinutesIn = addMinutes(at(day, "15:00"), 20);
     const swept = await settleOverdue(twentyMinutesIn);
     expect(swept.released).toBeGreaterThanOrEqual(1);
 
-    const released = await store.reservations.findById(booking.reservation.id);
+    const released = await store.reservations.findById(booking.id);
     expect(released?.status).toBe("cancelled");
     expect(released?.cancelReason).toContain("Released automatically");
 
@@ -435,19 +443,18 @@ describe("cancelling, check-in and release", () => {
   it("leaves a reservation alone once it has been checked in", async () => {
     const store = getDataStore();
     const member = await asUser(MEMBER_EMAIL);
-    const booking = await createReservation(member, {
+    const booking = await booked(MEMBER_EMAIL, {
       resourceId: BOARD_ROOM_A,
       title: "Design review",
       attendees: 4,
       startsAt: at(day, "15:00"),
       endsAt: at(day, "16:00"),
     });
-    if (!booking.ok) throw new Error("setup failed");
 
-    await checkIn(member, booking.reservation.id, addMinutes(at(day, "15:00"), 5));
+    await checkIn(member, booking.id, addMinutes(at(day, "15:00"), 5));
     await settleOverdue(addMinutes(at(day, "15:00"), 20));
 
-    const kept = await store.reservations.findById(booking.reservation.id);
+    const kept = await store.reservations.findById(booking.id);
     expect(kept?.status).toBe("confirmed");
   });
 });
@@ -455,16 +462,14 @@ describe("cancelling, check-in and release", () => {
 describe("maintenance", () => {
   it("cancels the bookings inside a blocked window and keeps the slot unbookable", async () => {
     const admin = await asUser(ADMIN_EMAIL);
-    const member = await asUser(MEMBER_EMAIL);
 
-    const booking = await createReservation(member, {
+    const booking = await booked(MEMBER_EMAIL, {
       resourceId: BOARD_ROOM_A,
       title: "Design review",
       attendees: 4,
       startsAt: at(day, "09:00"),
       endsAt: at(day, "10:00"),
     });
-    if (!booking.ok) throw new Error("setup failed");
 
     const { cancelled } = await blockTime(admin, {
       resourceId: BOARD_ROOM_A,
@@ -473,7 +478,7 @@ describe("maintenance", () => {
       reason: "Repainting",
     });
 
-    expect(cancelled.map((item) => item.id)).toContain(booking.reservation.id);
+    expect(cancelled.map((item) => item.id)).toContain(booking.id);
 
     const blocked = await checkSlot({ resourceId: BOARD_ROOM_A, startsAt: at(day, "09:00"), endsAt: at(day, "10:00") });
     expect(blocked.free).toBe(false);

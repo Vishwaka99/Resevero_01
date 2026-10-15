@@ -53,6 +53,7 @@ function toState(error: unknown): ActionState {
 
 function conflictFrom(check: AvailabilityCheck): ConflictInfo {
   return {
+    reason: check.reason ?? "unknown",
     message: check.message ?? "That time isn't available.",
     suggestions: check.suggestions.map((suggestion) => ({
       label: suggestion.label || formatRange(suggestion.startsAt, suggestion.endsAt),

@@ -268,6 +268,29 @@ const reservations: ReservationRepository = {
     });
   },
 
+  async confirmGuarded(id, patch): Promise<GuardedInsert> {
+    const existing = state().tables.reservations.find((r) => r.id === id);
+    if (!existing) throw new Error(`No reservation ${id}`);
+
+    return withLock(existing.resourceId, async () => {
+      const row = state().tables.reservations.find((r) => r.id === id);
+      if (!row) throw new Error(`No reservation ${id}`);
+
+      const blackout = state().tables.blackouts.find(
+        (b) => b.resourceId === row.resourceId && overlaps({ start: b.startsAt, end: b.endsAt }, { start: row.startsAt, end: row.endsAt }),
+      );
+      if (blackout) return { ok: false as const, reason: "blackout" as const, blackout: clone(blackout) };
+
+      // Re-read inside the lock: another approval may have claimed the slot
+      // between this request reaching the queue and an admin deciding it.
+      const clash = blockingAt(row.resourceId, row.startsAt, row.endsAt).find((r) => r.id !== id);
+      if (clash) return { ok: false as const, reason: "overlap" as const, conflict: hydrateReservation(clash) };
+
+      Object.assign(row, patch, { status: "confirmed" as const });
+      return { ok: true as const, reservation: clone(row) };
+    });
+  },
+
   async rescheduleGuarded(id, startsAt, endsAt, patch) {
     const existing = state().tables.reservations.find((r) => r.id === id);
     if (!existing) throw new Error(`No reservation ${id}`);

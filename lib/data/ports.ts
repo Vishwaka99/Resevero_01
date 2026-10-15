@@ -99,13 +99,27 @@ export interface ReservationRepository {
    * Inserts only if the slot is still free. The in-memory adapter serialises
    * the check per resource; the Postgres adapter relies on
    * `EXCLUDE USING gist (resource_id WITH =, tstzrange(starts_at, ends_at, '[)') WITH &&)
-   *  WHERE (status IN ('pending','confirmed'))`
-   * so two requests in the same millisecond cannot both win.
+   *  WHERE (status = 'confirmed')`
+   * so two writes in the same millisecond cannot both win.
+   *
+   * Note the scope: only a *confirmed* reservation holds a slot. A pending
+   * one is a bid, so several may exist for the same time.
    */
   createGuarded(input: NewReservation): Promise<GuardedInsert>;
 
   /** Moves a reservation to a new slot under the same no-overlap guard. */
   rescheduleGuarded(id: string, startsAt: Date, endsAt: Date, patch?: Partial<Pick<Reservation, "title" | "attendees">>): Promise<GuardedInsert>;
+
+  /**
+   * Confirms a pending request under that same guard.
+   *
+   * Approving is the moment a slot is actually claimed, so it needs the same
+   * protection as inserting one. Checking for a clash and then updating is
+   * two steps, and two admins deciding competing requests at once can both
+   * pass the check; this makes the claim atomic, exactly as `createGuarded`
+   * does for a new booking.
+   */
+  confirmGuarded(id: string, patch: Pick<Reservation, "decidedBy" | "decidedAt" | "decisionNote">): Promise<GuardedInsert>;
 
   update(id: string, patch: Partial<Omit<Reservation, "id" | "code" | "createdAt">>): Promise<Reservation>;
 

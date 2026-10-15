@@ -10,6 +10,7 @@
  */
 
 import { getDataStore } from "@/lib/data";
+import { needsApproval as requiresApproval } from "./approval-policy";
 import type { Blackout, Interval, Reservation, ReservationWithRelations, ResourceWithRelations } from "@/lib/domain/types";
 import {
   addDaysISO,
@@ -237,7 +238,7 @@ export async function checkSlot(request: SlotRequest, now: Date = new Date()): P
   const empty: AvailabilityCheck = { free: false, needsApproval: false, competing: [], suggestions: [], similarFree: [] };
   if (!resource) return { ...empty, reason: "not_bookable", message: "That resource no longer exists." };
 
-  const needsApproval = resource.requiresApproval;
+  const needsApproval = requiresApproval();
   const base = { ...empty, needsApproval };
   const { startsAt, endsAt } = request;
   const minutes = durationMinutes({ start: startsAt, end: endsAt });

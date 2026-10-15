@@ -9,6 +9,7 @@ import { getDataStore } from "@/lib/data";
 import type { AuthUser } from "@/lib/auth/session";
 import type { RecurrenceRule, ReservationWithRelations } from "@/lib/domain/types";
 import { addDaysISO, addMinutes, formatRange, formatWhen, fromLocal, minutesFromMidnight, toLocalDayISO } from "@/lib/domain/time";
+import { needsApproval } from "./approval-policy";
 import { AUTO_RELEASE_MINUTES, checkInWindow, checkSlot, type AvailabilityCheck } from "./availability";
 import { DomainError, forbidden, notFound, ruleViolation } from "./errors";
 
@@ -49,7 +50,7 @@ export async function createReservation(
   const resource = await store.resources.findById(input.resourceId);
   if (!resource) throw notFound("That resource");
 
-  const status = resource.requiresApproval ? "pending" : "confirmed";
+  const status = needsApproval() ? "pending" : "confirmed";
 
   return store.runInTransaction(async () => {
     const series = input.repeat
@@ -124,8 +125,8 @@ export async function createReservation(
           : `${resource.name} is yours, ${formatWhen(reservation.startsAt, reservation.endsAt)}`,
       body:
         status === "pending"
-          ? "We'll email you as soon as an admin decides."
-          : "A calendar invite is on its way to your email.",
+          ? "You'll see it on your reservations as soon as an admin decides."
+          : "It's in your reservations.",
     });
 
     if (status === "pending") {
