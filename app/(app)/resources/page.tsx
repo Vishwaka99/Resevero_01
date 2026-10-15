@@ -36,56 +36,56 @@ export default async function ResourcesPage({ searchParams }: { searchParams: Pr
       <ResourceFilters filters={view.filters} />
 
       {view.cards.length ? (
-        <div className="rv-grid rv-grid-3">
-          {view.cards.map((card) => (
-            <Card key={card.id} className="rv-res-card">
-              <div className="rv-inline" style={{ alignItems: "flex-start", justifyContent: "space-between" }}>
-                <div className="rv-inline" style={{ alignItems: "center" }}>
+        <Card>
+          <div className="rv-res-list">
+            {view.cards.map((card) => (
+              <div key={card.id} className="rv-res-row">
+                <div className="rv-res-id">
                   <Icon name={card.icon} tile />
-                  <span>
-                    <b style={{ font: "600 15px/22px var(--font-sans)" }}>{card.name}</b>
-                    <br />
-                    <span style={{ fontSize: 12, color: "var(--ink-muted)" }}>{card.meta}</span>
-                  </span>
+                  <div style={{ minWidth: 0 }}>
+                    <div className="rv-res-head">
+                      <span className="rv-res-name">{card.name}</span>
+                      <Badge status={card.status}>{card.statusLabel}</Badge>
+                    </div>
+                    <div className="rv-res-meta">{card.meta}</div>
+                    {card.tags.length ? (
+                      <div className="rv-tags" style={{ marginTop: "var(--space-2)" }}>
+                        {card.tags.map((tag) => (
+                          <span key={tag} className="rv-tag">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
-                <Badge status={card.status}>{card.statusLabel}</Badge>
-              </div>
 
-              {card.tags.length ? (
-                <div className="rv-tags">
-                  {card.tags.map((tag) => (
-                    <span key={tag} className="rv-tag">
-                      {tag}
-                    </span>
-                  ))}
+                {/* Availability is drawn, so a glance answers "when is it free?". */}
+                <div>
+                  <div className="rv-daybar" role="img" aria-label={`Availability today: ${card.nextFree}`}>
+                    {card.todayBar.map((cell, index) => (
+                      <i key={index} data-state={cell === "free" ? undefined : cell} />
+                    ))}
+                  </div>
+                  <div className="rv-daybar-scale">
+                    <span>{card.barStartLabel}</span>
+                    <span>{card.nextFree}</span>
+                    <span>{card.barEndLabel}</span>
+                  </div>
                 </div>
-              ) : null}
 
-              {/* Availability is drawn, so a glance answers "when is it free?". */}
-              <div>
-                <div className="rv-daybar" role="img" aria-label={`Availability today: ${card.nextFree}`}>
-                  {card.todayBar.map((cell, index) => (
-                    <i key={index} data-state={cell === "free" ? undefined : cell} />
-                  ))}
-                </div>
-                <div className="rv-daybar-scale">
-                  <span>{card.barStartLabel}</span>
-                  <span>{card.nextFree}</span>
-                  <span>{card.barEndLabel}</span>
+                <div className="rv-res-actions">
+                  <LinkButton href={card.detailHref} variant="secondary" size="sm">
+                    Details
+                  </LinkButton>
+                  <LinkButton href={card.reserveHref} size="sm">
+                    Reserve
+                  </LinkButton>
                 </div>
               </div>
-
-              <div className="rv-inline" style={{ justifyContent: "flex-end" }}>
-                <LinkButton href={card.detailHref} variant="secondary" size="sm">
-                  Details
-                </LinkButton>
-                <LinkButton href={card.reserveHref} size="sm">
-                  Reserve
-                </LinkButton>
-              </div>
-            </Card>
-          ))}
-        </div>
+            ))}
+          </div>
+        </Card>
       ) : (
         <Card>
           <EmptyState

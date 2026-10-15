@@ -6,16 +6,23 @@ whole application is built against it: the domain types in
 tables, and the repository ports in [`lib/data/ports.ts`](../lib/data/ports.ts)
 describe exactly the queries it has to serve.
 
-This schema is live in Supabase. `supabase/migrations/0001_initial_schema.sql`
-creates exactly what is drawn below; `npm run db:migrate` applies it. The app
-can also run on an in-memory adapter that implements the same ports — see
+This schema is live in Supabase. `supabase/migrations/` builds exactly what is
+drawn below — `0001_initial_schema.sql` creates it and `0002_supabase_auth.sql`
+links it to Supabase Auth — and `npm run db:migrate` applies them. The app can
+also run on an in-memory adapter that implements the same ports; see
 [Running on Supabase](../README.md#running-on-supabase) in the README.
+
+One table is not ours: `auth.users` belongs to Supabase Auth and holds the
+credential. `users` here is the profile, and it is the profile that carries
+the role — which is why a demotion takes effect on the next request rather
+than when a token expires. The two are joined by `users.auth_user_id`.
 
 All instants are `timestamptz`, stored in UTC and displayed in the
 organisation's timezone (`ORG_TIME_ZONE`, default `Asia/Colombo`).
 
 ```mermaid
 erDiagram
+    auth_users ||--o| users : "signs in as"
     departments ||--o{ users : "has"
     users ||--o{ reservations : "books"
     users ||--o{ notifications : "receives"
@@ -33,6 +40,12 @@ erDiagram
     recurrence_series ||--o{ reservations : "repeats as"
     reservations ||--o{ notifications : "triggers"
 
+    auth_users {
+        uuid id PK "auth.users — Supabase Auth owns this"
+        text email
+        text encrypted_password
+    }
+
     departments {
         uuid id PK
         text name UK
@@ -42,7 +55,8 @@ erDiagram
         uuid id PK
         text name
         citext email UK
-        text password_hash
+        uuid auth_user_id FK UK "null until first sign-in"
+        text password_hash "unused since 0002, kept nullable"
         text role "admin | member"
         uuid department_id FK "null"
         boolean is_active
@@ -207,6 +221,15 @@ CREATE INDEX audit_logs_entity ON audit_logs (entity, entity_id, created_at DESC
 ```
 
 ## Notes on a few columns
+
+**`users.auth_user_id`** points at `auth.users(id)`, `on delete set null`. Null
+means a profile that has never been matched to an identity — one seeded ahead
+of its account, or created by an admin before the person first signs in; the
+two are matched on email at that point and the link written then. Deleting the
+identity leaves the profile and everything it owns intact, and only takes away
+the ability to sign in. `password_hash` is what Supabase Auth replaced: nothing
+reads or writes it now, and it stays nullable so a database can be rolled back
+to the cookie session without having lost its hashes.
 
 | Column | Why it exists |
 | --- | --- |

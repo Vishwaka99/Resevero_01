@@ -83,12 +83,53 @@ These are *profiles*. Since sign-in moved to Supabase Auth, each also needs an
 
 - On the `postgres` adapter, `npm run db:seed` creates every identity, confirms
   it and sets the password above. Nothing to do.
-- On the `memory` adapter there is no seeder to run, so create the two accounts
-  once in the dashboard — Authentication → Users → Add user, with **Auto
-  Confirm User** on — using the same emails and password.
+- On the `memory` adapter, run `npm run auth:seed`. It creates the identities
+  and nothing else, which is the piece `db:seed` cannot do without a database.
+  It needs `SUPABASE_SERVICE_ROLE_KEY`, and it is idempotent.
 
 The profile and the identity are joined on email at first sign-in, and the link
 is stored in `users.auth_user_id` from then on.
+
+### Registering
+
+`/sign-up` takes a name, a work email and a password, and the account works
+immediately: the Supabase identity is created already confirmed, the profile is
+active, and the person is signed in with the password they just chose. Nothing
+is emailed and nothing is approved.
+
+That is a deliberate trade, and worth stating plainly. **Nobody proves they own
+the address they register**, so an address here is not evidence of anything,
+and anyone who can reach the page can book a room. Deactivation on
+**Admin → Users** is the only gate, and it applies after the fact rather than
+before. An organisation that needs the other arrangement has two options: hold
+new profiles inactive and approve them, or close `/sign-up` and invite people
+from the admin screen instead.
+
+The identity is created with the service-role key rather than through the
+public signup endpoint, so registering behaves the same whether or not the
+project has email confirmation switched on. One consequence: Supabase's own
+signup rate limiting does not apply, so a deployment facing the internet wants
+a rate limit in front of the action.
+
+An identity can outlive its profile — the in-memory store resets on every
+restart — and registering again adopts it, but only after signing in with the
+password supplied. That is what distinguishes the owner of an address from
+someone claiming it.
+
+#### Validating the form
+
+`signUpInput` in `lib/bff/schemas.ts` decides: a name of 2–80 characters
+without the brackets that would break rendering wherever it is shown, an
+address that parses and fits in 160, a password of 8–72 characters that is not
+only spaces, and a confirmation that matches. 72 is bcrypt's limit — anything
+beyond it is silently ignored by the hash, so refusing is more honest than
+letting someone choose a password that is not the one they typed.
+
+The same rules appear on the inputs as `required`, `minLength` and
+`maxLength`. That is a convenience for whoever is typing, not the check: a
+server action can be called without going near the form, so the schema runs on
+every submission regardless.
+
 
 ### Other commands
 
@@ -97,6 +138,7 @@ npm test          # 34 tests covering the booking rules
 npm run typecheck # tsc --noEmit
 npm run lint
 npm run build
+npm run auth:seed # create the demo accounts' Supabase identities
 
 npm run db:migrate  # apply supabase/migrations to the database
 npm run db:seed     # load the demo data into it
@@ -313,10 +355,13 @@ Supabase instead of trusting the cookie. That is a network call per request:
 `auth.getClaims()` verifies locally against the project's JWKS and would remove
 it, which is the first thing to reach for if this shows up in latency.
 
-Creating an account needs the service-role key, so `inviteUser` goes through
-`utils/supabase/admin.ts`. It creates the identity before the profile: an
-unused identity is recoverable, whereas a profile that can never sign in looks
-like a working user.
+Creating an account *for someone else* needs the service-role key, so
+`inviteUser` goes through `utils/supabase/admin.ts`. It creates the identity
+before the profile: an unused identity is recoverable, whereas a profile that
+can never sign in looks like a working user.
+
+Self-registration uses it too, so that a new account does not depend on the
+project's email settings. See [Registering](#registering).
 
 ---
 

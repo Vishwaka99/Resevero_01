@@ -15,37 +15,81 @@ export type LogoProps = {
 };
 
 /**
- * The "lanes" mark: three booking slots on a rounded square, the middle one
- * amber as the slot just reserved. It echoes the availability timeline.
+ * The Resevero lockup.
+ *
+ * There are two artworks, one drawn for light grounds and one for dark, and
+ * each is a wide canvas with the logo somewhere inside it. So the mark and
+ * the word are taken as background crops at coordinates measured off each
+ * file rather than shipped as four images. Both crops of a file share its
+ * vertical band, which is what keeps them on one baseline at any size.
+ *
+ * Both artworks are rendered and CSS shows one. The choice cannot be made
+ * here: a theme can be set partway down the tree — the auth pages pin
+ * themselves to light inside an app that may be dark — so it is made by
+ * inherited custom properties, which resolve per subtree. Reading the theme
+ * in JavaScript would also mean guessing it on the server.
+ *
+ * Mark and word stay separate elements because the sidebar collapses to an
+ * icon rail and hides `.rv-logo-word`.
  */
-export function Logo({ layout = "lockup", size = 32, className }: LogoProps) {
-  const mark = (
-    <svg
-      className="rv-logo-mark"
-      width={size}
-      height={size}
-      viewBox="0 0 64 64"
-      aria-hidden={layout === "mark" ? undefined : "true"}
-      role={layout === "mark" ? "img" : undefined}
-      aria-label={layout === "mark" ? "Reservo" : undefined}
-      dangerouslySetInnerHTML={{
-        __html:
-          '<rect class="rv-lg-bg" width="64" height="64" rx="18"/>' +
-          '<rect class="rv-lg-fg" x="14" y="16" width="24" height="9" rx="4.5"/>' +
-          '<rect class="rv-lg-ac" x="24" y="27.5" width="26" height="9" rx="4.5"/>' +
-          '<rect class="rv-lg-fg" x="14" y="39" width="12" height="9" rx="4.5" opacity=".45"/>' +
-          '<rect class="rv-lg-fg" x="30" y="39" width="20" height="9" rx="4.5"/>',
-      }}
-    />
-  );
+type CropBox = { x: number; y: number; width: number; height: number };
+type Artwork = { src: string; width: number; height: number; mark: CropBox; word: CropBox };
 
-  if (layout === "mark") return mark;
+/** Coordinates measured off each file; see the note above. */
+const ARTWORK: Record<"light" | "dark", Artwork> = {
+  light: {
+    src: "/resevero-logo-light.png",
+    width: 1024,
+    height: 484,
+    mark: { x: 38, y: 118, width: 264, height: 249 },
+    word: { x: 323, y: 118, width: 672, height: 249 },
+  },
+  dark: {
+    src: "/resevero-logo-dark.png",
+    width: 1024,
+    height: 434,
+    mark: { x: 52, y: 92, width: 254, height: 252 },
+    word: { x: 320, y: 92, width: 655, height: 252 },
+  },
+};
+
+function crop(art: Artwork, box: CropBox, renderedHeight: number) {
+  const scale = renderedHeight / box.height;
+  return {
+    width: Math.round(box.width * scale),
+    height: renderedHeight,
+    backgroundImage: `url(${art.src})`,
+    backgroundSize: `${Math.round(art.width * scale)}px ${Math.round(art.height * scale)}px`,
+    backgroundPosition: `-${Math.round(box.x * scale)}px -${Math.round(box.y * scale)}px`,
+    backgroundRepeat: "no-repeat" as const,
+  };
+}
+
+/** The whitespace between mark and word in the artwork, scaled with it. */
+function lockupGap(art: Artwork, size: number) {
+  return Math.max(3, Math.round(((art.word.x - (art.mark.x + art.mark.width)) * size) / art.mark.height));
+}
+
+function Artboard({ theme, size, markOnly }: { theme: "light" | "dark"; size: number; markOnly: boolean }) {
+  const art = ARTWORK[theme];
   return (
-    <span className={cx("rv-logo", layout === "stacked" && "rv-logo-stacked", className)}>
-      {mark}
-      <span className="rv-logo-word" style={{ fontSize: `${Math.round(size * 0.58)}px` }}>
-        Reservo
-      </span>
+    <span className={`rv-logo-art rv-logo-art-${theme}`} style={{ gap: lockupGap(art, size) }} aria-hidden="true">
+      <span className="rv-logo-mark" style={crop(art, art.mark, size)} />
+      {markOnly ? null : <span className="rv-logo-word" style={crop(art, art.word, size)} />}
+    </span>
+  );
+}
+
+export function Logo({ layout = "lockup", size = 32, className }: LogoProps) {
+  const markOnly = layout === "mark";
+  return (
+    <span
+      className={cx("rv-logo", layout === "stacked" && "rv-logo-stacked", className)}
+      role="img"
+      aria-label="Resevero"
+    >
+      <Artboard theme="light" size={size} markOnly={markOnly} />
+      <Artboard theme="dark" size={size} markOnly={markOnly} />
     </span>
   );
 }
@@ -147,15 +191,21 @@ type FieldOwnProps = {
   variant?: "search";
   multiline?: boolean;
   className?: string;
+  /**
+   * A control pinned to the right inside the input — a reveal button, a unit,
+   * a clear cross. It sits inside the border, so the input reserves room for
+   * it rather than letting text run underneath.
+   */
+  trailing?: ReactNode;
 };
 
 export type FieldProps = FieldOwnProps &
   Omit<InputHTMLAttributes<HTMLInputElement> & TextareaHTMLAttributes<HTMLTextAreaElement>, keyof FieldOwnProps>;
 
-export function Field({ label, hint, error, icon, variant, multiline, className, id, required, ...rest }: FieldProps) {
+export function Field({ label, hint, error, icon, variant, multiline, className, id, required, trailing, ...rest }: FieldProps) {
   const fieldId = id ?? `rv-f-${rest.name ?? label?.toLowerCase().replace(/[^a-z0-9]+/g, "-") ?? "input"}`;
   const describedBy = hint || error ? `${fieldId}-hint` : undefined;
-  const inputClass = cx("rv-input", variant === "search" && "rv-input-search");
+  const inputClass = cx("rv-input", variant === "search" && "rv-input-search", Boolean(trailing) && "rv-input-trailing");
 
   const control = multiline ? (
     <textarea id={fieldId} required={required} aria-invalid={error ? "true" : undefined} aria-describedby={describedBy} className={inputClass} {...rest} />
@@ -175,10 +225,11 @@ export function Field({ label, hint, error, icon, variant, multiline, className,
           ) : null}
         </label>
       ) : null}
-      {icon ? (
+      {icon || trailing ? (
         <div className="rv-input-wrap">
-          <Icon name={icon} />
+          {icon ? <Icon name={icon} /> : null}
           {control}
+          {trailing}
         </div>
       ) : (
         control

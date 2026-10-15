@@ -19,6 +19,11 @@ export type ActionState = {
   errors?: FieldErrors;
   /** Present when a write was refused because the slot was taken. */
   conflict?: ConflictInfo;
+  /**
+   * What was typed, so a refused form can be rendered with it still in place
+   * rather than making someone retype everything. Passwords are never in here.
+   */
+  values?: Record<string, string>;
   /** Set on success so the screen can link to what was created. */
   createdId?: string;
   createdCode?: string;

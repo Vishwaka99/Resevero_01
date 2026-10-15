@@ -1,4 +1,6 @@
 export { Icon, iconNames, type IconName, type IconProps } from "./Icon";
+export { PasswordField } from "./PasswordField";
+export { ThemeToggle } from "./ThemeToggle";
 export {
   Alert,
   Avatar,

@@ -27,30 +27,89 @@ body {
 a { color: var(--primary); }
 a:hover { color: var(--primary-hover); }
 
-.rv-shell { display: flex; min-height: 100vh; background: var(--canvas); }
-.rv-shell-main { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; }
+/*
+ * A link styled as a button is not a link for colour purposes.
+ *
+ * `a:hover` above is (0,1,1) and beats `.rv-btn-primary` at (0,1,0), so
+ * hovering a LinkButton repainted its label in --primary-hover — the same
+ * colour the button's own hover puts behind it. "New reservation" went
+ * invisible under the cursor. Restoring the variant's colour here, at a
+ * specificity that wins, is narrower than weakening the link rule.
+ */
+a.rv-btn:hover { color: inherit; }
+a.rv-btn-primary,
+a.rv-btn-primary:hover { color: var(--on-primary); }
+a.rv-btn-danger,
+a.rv-btn-danger:hover { color: var(--on-danger); }
+a.rv-btn-secondary,
+a.rv-btn-secondary:hover { color: var(--ink); }
+a.rv-btn-ghost,
+a.rv-btn-ghost:hover { color: var(--primary-ink); }
+
+:root {
+  /* The content column. The page and the top bar both measure from this, so
+     the search box, the avatar and the content below them line up on one
+     grid instead of the bar spanning the window while the page does not. */
+  --content-max: 1280px;
+}
+
+/*
+ * The application sits on the page as one card rather than filling the
+ * window: a white panel on a tinted ground, with the sidebar and the bar
+ * inside it.
+ *
+ * `overflow: clip` rather than `hidden` is deliberate. Hidden would make the
+ * card a scroll container, and the sidebar and top bar inside it stick to
+ * that container instead of the viewport — they would scroll away.
+ */
+.rv-shell {
+  display: flex;
+  max-width: var(--shell-max);
+  margin: var(--space-6) auto;
+  min-height: calc(100vh - var(--space-6) * 2);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--shell-radius);
+  overflow: clip;
+  box-shadow: var(--shadow-card);
+}
+.rv-shell-main { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; background: var(--surface); }
 
 .rv-topbar {
   height: var(--topbar-height);
-  padding: 0 var(--space-6);
+  padding: 0;
   display: flex;
-  align-items: center;
-  gap: var(--space-4);
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
   z-index: 20;
 }
-.rv-topbar-search { flex: 1 1 auto; max-width: 440px; }
-.rv-topbar-end { margin-left: auto; display: flex; align-items: center; gap: var(--space-3); }
+/* The bar's surface runs edge to edge; what is inside it does not. */
+.rv-topbar-inner {
+  width: 100%;
+  max-width: var(--content-max);
+  margin-inline: auto;
+  padding: 0 var(--space-8);
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+.rv-topbar-search { flex: 1 1 auto; max-width: 420px; }
+.rv-topbar-end { margin-left: auto; display: flex; align-items: center; gap: var(--space-2); }
+
+main { background: var(--surface); flex: 1 1 auto; }
 
 .rv-page {
-  padding: var(--space-6);
+  /* margin-inline is the fix for the obvious one: a max-width with no auto
+     margin pins the column to the left of a wide window while the bar above
+     it spans the whole width, and the two visibly disagree. */
+  margin-inline: auto;
+  padding: var(--space-8) var(--space-8) var(--space-12);
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
-  max-width: 1280px;
+  gap: var(--space-8);
+  max-width: var(--content-max);
   width: 100%;
 }
 .rv-page-head {
@@ -59,9 +118,12 @@ a:hover { color: var(--primary-hover); }
   align-items: flex-end;
   justify-content: space-between;
   gap: var(--space-4);
+  /* A title sitting the same distance from its content as two cards sit from
+     each other reads as one more card. This separates the two. */
+  margin-bottom: calc(var(--space-2) * -1);
 }
-.rv-page-title { margin: 0; font: 700 24px/32px var(--font-sans); letter-spacing: -0.01em; }
-.rv-page-sub { margin: 4px 0 0; color: var(--ink-muted); font-size: 14px; max-width: 70ch; }
+.rv-page-title { margin: 0; font: 700 26px/34px var(--font-sans); letter-spacing: -0.015em; }
+.rv-page-sub { margin: 6px 0 0; color: var(--ink-muted); font-size: 14px; max-width: 64ch; }
 .rv-page-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); }
 
 .rv-grid { display: grid; gap: var(--space-6); }
@@ -82,7 +144,24 @@ a:hover { color: var(--primary-hover); }
 }
 
 /* Sidebar: the active item is decided by the router, not by markup */
-.rv-side { position: sticky; top: 0; height: 100vh; overflow-y: auto; flex: none; }
+/*
+ * `align-self: flex-start` here left the nav as tall as its own items, so on
+ * a short page its ground and edge stopped partway down the card and the
+ * column did not line up with the content beside it. A flex item stretches by
+ * default, which is what the chrome wants.
+ *
+ * Sticky then moves inside. The column is given the card's own minimum height
+ * so the sign-out block still lands at the bottom, and capped at the viewport
+ * so there is somewhere for it to stick to on a long page.
+ */
+.rv-side { flex: none; }
+.rv-side-inner {
+  position: sticky;
+  top: 0;
+  min-height: calc(100vh - var(--space-6) * 2);
+  max-height: 100vh;
+  overflow-y: auto;
+}
 .rv-side-rail-label { display: inline; }
 
 /* Bottom tab bar, phones only */
@@ -100,15 +179,76 @@ a:hover { color: var(--primary-hover); }
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
 }
+/*
+ * Selects.
+ *
+ * `appearance: none` is the whole difference. Without it every platform draws
+ * its own control, and a filter bar becomes a row of mismatched widgets next
+ * to inputs that do match. With it they share the inputs' height, radius and
+ * border, and the chevron below is ours.
+ *
+ * That chevron is a mask rather than a background image, so it takes its
+ * colour from `background-color` and follows the theme on its own. A data-URI
+ * image would bake in a hex that needs a second declaration for dark, which is
+ * exactly the kind of thing that gets forgotten.
+ */
 .rv-select {
+  appearance: none;
+  -webkit-appearance: none;
   height: var(--control-height);
-  padding: 0 var(--space-3);
+  /* Room on the right for the chevron, so it never sits on the label. */
+  padding: 0 calc(var(--space-8) + var(--space-1)) 0 var(--space-3);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
-  background: var(--surface);
+  background-color: var(--surface-sunken);
   color: var(--ink);
   font: 500 13px/18px var(--font-sans);
   cursor: pointer;
+  box-shadow: var(--shadow-inset);
+  transition: background-color .14s ease-out, border-color .14s ease-out, box-shadow .14s ease-out;
+  background-image: var(--rv-chevron);
+  background-repeat: no-repeat;
+  background-position: right var(--space-3) center;
+  background-size: 16px 16px;
+}
+.rv-select:hover:not(:disabled) { border-color: var(--primary); }
+.rv-select:focus {
+  outline: none;
+  background-color: var(--surface);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+
+/*
+ * The reveal button inside a password field. It sits on top of the input, so
+ * the input reserves the width rather than letting characters run under it.
+ */
+.rv-input-trailing { padding-right: 44px; }
+.rv-reveal {
+  position: absolute;
+  right: 4px;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+.rv-reveal:hover { color: var(--ink); background: var(--surface-hover); }
+.rv-reveal[aria-pressed="true"] { color: var(--primary); }
+.rv-select:disabled { opacity: .5; cursor: not-allowed; }
+
+/*
+ * The open menu itself is the browser's, and only its colours can be reached.
+ * Setting them stops a dark page opening a white list.
+ */
+.rv-select option {
+  background: var(--surface);
+  color: var(--ink);
 }
 .rv-segmented { display: flex; gap: var(--space-1); padding: 4px; background: var(--surface-sunken); border-radius: var(--radius-md); width: max-content; }
 .rv-segmented a,
@@ -122,7 +262,34 @@ a:hover { color: var(--primary-hover); }
 .rv-segmented [aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-card); }
 
 /* Resource cards on Browse */
-.rv-res-card { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-5); }
+/*
+ * Browse resources, as rows rather than a grid of cards.
+ *
+ * The page answers "what is free, and when?", and a three-up grid of cards
+ * answered it three times over in three different places: a reader comparing
+ * two rooms had to hop between tiles, each with its own little bar. One column
+ * of rows puts every availability bar in the same place on the page, so the
+ * eye runs down them.
+ *
+ * The bars are not a shared axis, though, and the labels on each row say so:
+ * resources keep their own opening hours, so two bars can cover different
+ * spans. Drawing one axis across the top would be tidier and would lie.
+ */
+.rv-res-list { display: flex; flex-direction: column; }
+.rv-res-row {
+  display: grid;
+  grid-template-columns: minmax(230px, 1.2fr) minmax(220px, 1.6fr) auto;
+  gap: var(--space-5);
+  align-items: center;
+  padding: var(--space-4) var(--space-5);
+}
+.rv-res-row + .rv-res-row { border-top: 1px solid var(--border); }
+.rv-res-row:hover { background: var(--surface-hover); }
+.rv-res-id { display: flex; gap: var(--space-3); align-items: flex-start; min-width: 0; }
+.rv-res-head { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.rv-res-name { font: 600 15px/22px var(--font-sans); }
+.rv-res-meta { font: 400 12px/18px var(--font-sans); color: var(--ink-muted); margin-top: 1px; }
+.rv-res-actions { display: flex; gap: var(--space-2); justify-content: flex-end; }
 .rv-daybar { display: flex; gap: 2px; height: 10px; }
 .rv-daybar i { flex: 1; border-radius: 2px; background: var(--surface-sunken); }
 .rv-daybar i[data-state="busy"] { background: var(--slot-busy); }
@@ -160,8 +327,20 @@ a:hover { color: var(--primary-hover); }
 .rv-heat-cell { height: 28px; border-radius: var(--radius-sm); background: var(--chart-track); }
 .rv-heat-label { font: 500 11px/16px var(--font-mono); color: var(--ink-muted); }
 
+@media (max-width: 1400px) {
+  .rv-topbar-inner,
+  .rv-page { padding-inline: var(--space-6); }
+}
+
+@media (max-width: 1100px) {
+  /* Actions drop under the row rather than squeezing the bar to nothing. */
+  .rv-res-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); }
+  .rv-res-actions { grid-column: 1 / -1; justify-content: flex-start; }
+}
+
 @media (max-width: 1200px) {
-  .rv-side { width: 72px; padding: var(--space-4) var(--space-2); }
+  .rv-side { width: 72px; }
+  .rv-side-inner { padding: var(--space-4) var(--space-2); }
   .rv-side-section { display: none; }
   .rv-side .rv-nav { justify-content: center; padding: 10px 0; position: relative; }
   .rv-side-rail-label { display: none; }
@@ -175,10 +354,11 @@ a:hover { color: var(--primary-hover); }
 
 @media (max-width: 768px) {
   .rv-side { display: none; }
-  .rv-page { padding: var(--space-4); gap: var(--space-4); padding-bottom: 88px; }
-  .rv-topbar { padding: 0 var(--space-4); }
+  .rv-page { padding: var(--space-4); gap: var(--space-5); padding-bottom: 88px; }
+  .rv-topbar-inner { padding: 0 var(--space-4); }
   .rv-grid-2,
   .rv-grid-3 { grid-template-columns: minmax(0, 1fr); }
+  .rv-res-row { grid-template-columns: minmax(0, 1fr); gap: var(--space-3); padding: var(--space-4); }
   .rv-btn { height: 48px; }
   .rv-btn-sm { height: 36px; }
   .rv-bar-row { grid-template-columns: 120px 1fr 44px; }
@@ -217,4 +397,78 @@ a:hover { color: var(--primary-hover); }
   *,
   *::before,
   *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
+
+/* ------------------------------------------------------------------ *
+ * Auth pages
+ *
+ * One centred card on a tinted page: the form on the left, where reading
+ * starts, and the panel on the right. Below 900px the card stacks, panel
+ * first, so a phone leads with the pitch and then the fields.
+ * ------------------------------------------------------------------ */
+
+.rv-auth-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: var(--space-6);
+  background: var(--canvas);
+  color: var(--ink);
+}
+.rv-auth-card {
+  display: flex;
+  width: 100%;
+  max-width: 1080px;
+  min-height: 620px;
+  background: var(--surface);
+  border-radius: var(--shell-radius);
+  overflow: clip;
+  box-shadow: 0 18px 48px rgba(16, 24, 40, 0.1);
+}
+.rv-auth-form {
+  flex: 1 1 440px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-12) var(--space-8);
+  box-sizing: border-box;
+}
+.rv-auth-brand { display: flex; justify-content: center; }
+
+.rv-auth-aside {
+  flex: 1 1 520px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-12) var(--space-8);
+  box-sizing: border-box;
+  background: var(--primary);
+  color: var(--on-primary);
+}
+.rv-auth-copy { max-width: 42ch; text-align: center; }
+.rv-auth-copy h1 { margin: 0 0 10px; font: 700 26px/34px var(--font-sans); letter-spacing: -0.02em; }
+.rv-auth-copy p { margin: 0; font-size: 15px; line-height: 23px; opacity: 0.88; }
+
+.rv-auth-art { width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 12px; }
+.rv-auth-art-row { display: flex; gap: 10px; }
+.rv-auth-art-row span { height: 14px; border-radius: 7px; background: var(--on-primary); }
+
+.rv-auth-dots { display: flex; gap: 8px; }
+.rv-auth-dots i { width: 7px; height: 7px; border-radius: var(--radius-pill); background: var(--on-primary); opacity: 0.4; }
+.rv-auth-dots i[data-active="true"] { opacity: 1; }
+
+@media (max-width: 900px) {
+  .rv-auth-card { flex-direction: column-reverse; min-height: 0; }
+  .rv-auth-form,
+  .rv-auth-aside { flex: 0 0 auto; padding: var(--space-8) var(--space-6); }
+  .rv-auth-art { max-width: 300px; }
+}
+
+@media (max-width: 560px) {
+  .rv-auth-page { padding: 0; }
+  .rv-auth-card { border-radius: 0; min-height: 100vh; box-shadow: none; }
 }

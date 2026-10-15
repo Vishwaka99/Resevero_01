@@ -16,7 +16,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { requireAdmin, requireUser, signIn, signOut } from "@/lib/auth/session";
+import { requireAdmin, requireUser, signIn, signOut, signUp } from "@/lib/auth/session";
 import { approveReservation, rejectReservation } from "@/lib/server/approvals";
 import type { AvailabilityCheck } from "@/lib/server/availability";
 import { isDomainError } from "@/lib/server/errors";
@@ -39,6 +39,7 @@ import {
   setActiveInput,
   setRoleInput,
   signInInput,
+  signUpInput,
   toMinutes,
 } from "./schemas";
 
@@ -83,6 +84,31 @@ export async function signInAction(_previous: ActionState, form: FormData): Prom
   if (!result.ok) return errorState(result.message);
 
   redirect(parsed.data.redirectTo ?? "/dashboard");
+}
+
+export async function signUpAction(_previous: ActionState, form: FormData): Promise<ActionState> {
+  // Kept for every refusal below: a form that empties itself because one field
+  // was wrong makes the person retype the three that were right.
+  const typed = {
+    name: String(form.get("name") ?? ""),
+    email: String(form.get("email") ?? ""),
+  };
+
+  const parsed = parseForm(signUpInput, form);
+  if (!parsed.ok) return { ...errorState("Check the form and try again.", parsed.errors), values: typed };
+
+  const result = await signUp(parsed.data);
+  if (!result.ok) {
+    // A refusal that belongs to one field is shown under it, where the person
+    // is looking, rather than only in the banner above the form.
+    return {
+      ...errorState(result.message, result.field ? { [result.field]: result.message } : undefined),
+      values: typed,
+    };
+  }
+
+  // signUp signed them in, so there is nowhere to wait.
+  redirect("/dashboard");
 }
 
 export async function signOutAction(): Promise<void> {
