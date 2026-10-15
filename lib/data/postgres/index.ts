@@ -447,6 +447,40 @@ const reservations: ReservationRepository = {
     }
   },
 
+  /**
+   * Confirming is claiming the slot, so it goes through the constraint rather
+   * than a check beforehand: a 23P01 means another approval got there first.
+   */
+  async confirmGuarded(id, patch): Promise<GuardedInsert> {
+    const sql = db();
+    const existing = await reservations.findById(id);
+    if (!existing) throw new Error(`No reservation ${id}`);
+
+    const blackout = (await blackouts.findOverlapping(existing.resourceId, existing.startsAt, existing.endsAt))[0];
+    if (blackout) return { ok: false, reason: "blackout", blackout };
+
+    try {
+      await sql`
+        update reservations
+           set status = 'confirmed',
+               decided_by = ${patch.decidedBy},
+               decided_at = ${patch.decidedAt},
+               decision_note = ${patch.decisionNote},
+               updated_at = now()
+         where id = ${id}
+      `;
+      const confirmed = await reservations.findById(id);
+      if (!confirmed) throw new Error("The reservation vanished immediately after being confirmed");
+      return { ok: true, reservation: confirmed };
+    } catch (error) {
+      if (errorCode(error) !== PG_ERROR.exclusionViolation) throw error;
+
+      const conflict = (await reservations.findOverlapping(existing.resourceId, existing.startsAt, existing.endsAt, id))[0];
+      if (!conflict) throw error;
+      return { ok: false, reason: "overlap", conflict };
+    }
+  },
+
   async rescheduleGuarded(id, startsAt, endsAt, patch) {
     const sql = db();
 

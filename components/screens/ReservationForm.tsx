@@ -244,7 +244,7 @@ export function ReservationForm({ view }: { view: ReservationFormView }) {
               <Alert tone="success" title="The slot is free">
                 {availability.needsApproval
                   ? "An admin decides this one. The slot is held while they look at it."
-                  : "Nothing else is booked here, so it will be confirmed straight away."}
+                  : "Nothing else is booked here. An admin still has to approve it."}
               </Alert>
             ) : null}
 

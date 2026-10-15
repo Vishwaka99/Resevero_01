@@ -78,8 +78,8 @@ export async function buildAvailabilityAnswer(
       resourceName: resource?.name ?? "—",
       whenLabel: minutes ? `${formatDay(startsAt)} · ${formatRange(startsAt, endsAt)}` : "—",
       approvalLabel: check.needsApproval
-        ? "Needed: an admin decides, and we'll email you"
-        : "Not needed: confirmed straight away",
+        ? "Needed: an admin decides, and you'll see it on your reservations"
+        : "Not needed",
     },
   };
 }

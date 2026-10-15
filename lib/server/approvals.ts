@@ -62,28 +62,25 @@ export async function approveReservation(actor: AuthUser, id: string, note: stri
   if (reservation.status !== "pending") throw ruleViolation("That request has already been decided.");
   if (reservation.startsAt <= now) throw ruleViolation("That request's start time has already passed.");
 
-  // A pending request does not hold the slot, so something may have been
-  // confirmed in the meantime. Approving is the moment the slot is claimed,
-  // and it has to be free right now.
-  const taken = await store.reservations.findOverlapping(reservation.resourceId, reservation.startsAt, reservation.endsAt, reservation.id);
-  if (taken.length) {
-    throw ruleViolation(
-      `${reservation.resource.name} was booked for ${formatRange(taken[0].startsAt, taken[0].endsAt)} while this request was waiting. Reject it with a reason, or suggest another time.`,
-    );
-  }
+  // A pending request does not hold the slot, so approving is the moment it
+  // is claimed — and the claim goes through the same guard as a new booking.
+  // Checking first and updating after is two steps, and two admins deciding
+  // competing requests at once would both pass the check.
+  const claimed = await store.reservations.confirmGuarded(reservation.id, {
+    decidedBy: actor.id,
+    decidedAt: now,
+    decisionNote: note,
+  });
 
-  const blocked = await store.blackouts.findOverlapping(reservation.resourceId, reservation.startsAt, reservation.endsAt);
-  if (blocked.length) {
-    throw ruleViolation(`${reservation.resource.name} is blocked for ${blocked[0].reason.toLowerCase()} at that time. Reject the request with a reason.`);
+  if (!claimed.ok) {
+    throw claimed.reason === "blackout"
+      ? ruleViolation(`${reservation.resource.name} is blocked for ${claimed.blackout.reason.toLowerCase()} at that time. Reject the request with a reason.`)
+      : ruleViolation(
+          `${reservation.resource.name} was booked for ${formatRange(claimed.conflict.startsAt, claimed.conflict.endsAt)} while this request was waiting. Reject it with a reason, or suggest another time.`,
+        );
   }
 
   return store.runInTransaction(async () => {
-    await store.reservations.update(reservation.id, {
-      status: "confirmed",
-      decidedBy: actor.id,
-      decidedAt: now,
-      decisionNote: note,
-    });
 
     await store.audit.create({
       actorId: actor.id,
@@ -98,7 +95,7 @@ export async function approveReservation(actor: AuthUser, id: string, note: stri
       reservationId: reservation.id,
       kind: "approved",
       title: `${reservation.resource.name} is approved for ${formatWhen(reservation.startsAt, reservation.endsAt)}`,
-      body: note ?? "A calendar invite is on its way to your email.",
+      body: note ?? "It's confirmed and showing on your reservations.",
     });
 
     // Clashing requests cannot be granted any more, so close them now rather

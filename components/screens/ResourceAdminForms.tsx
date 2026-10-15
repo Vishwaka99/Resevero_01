@@ -80,6 +80,12 @@ export function ResourceForm({ view }: { view: ManageResourcesView }) {
           <Checkbox label="Needs an admin's approval" name="requiresApproval" defaultChecked={form.requiresApproval} />
           <Checkbox label="Needs check-in, or the slot is released" name="requiresCheckIn" defaultChecked={form.requiresCheckIn} />
         </div>
+        {/* The setting is still stored, and is what the policy would read if
+            it went back to being per-resource. Saying so beats a tickbox that
+            looks like it decides something it does not. */}
+        <p className="rv-muted" style={{ margin: 0, fontSize: 13 }}>
+          Every booking currently needs an admin&apos;s approval, whatever this is set to.
+        </p>
 
         <Field
           label="Features"

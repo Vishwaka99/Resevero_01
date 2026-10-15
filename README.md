@@ -215,9 +215,17 @@ Both cannot be true. If a pending request locked the slot, the second person
 could never ask, and the approvals screen's central feature would be dead code.
 So only `confirmed` reservations own a slot. Pending requests still appear on
 the timeline, dashed, so the competition is visible, and the booking form says
-who else has asked. Approval is the moment the slot is claimed, so
-`approveReservation` re-checks for a confirmed clash before confirming, and
-auto-rejects the other requests with a reason sent to each person.
+who else has asked.
+
+This matters more than it used to, because **every** booking is now a request
+(`lib/server/approval-policy.ts`) and approval is therefore the only way a
+slot is ever claimed. So the claim is guarded rather than checked: it goes
+through `confirmGuarded`, which lets the exclusion constraint decide in
+Postgres and takes the per-resource lock in memory, exactly as inserting a
+booking does. Checking for a clash and then updating would be two steps, and
+two admins deciding competing requests at the same moment would both pass the
+check. Approving also auto-rejects the other requests for that slot, with a
+reason sent to each person.
 
 ### Rooms release themselves
 
@@ -429,7 +437,8 @@ docs/erd.md               the schema, explained
 actually hurt if they broke:
 
 - half-open overlap in every arrangement, and local-time round-tripping;
-- confirmed straight away vs. waiting for approval;
+- every booking starting as a request, and reaching the approvals queue;
+- two people bidding for one slot, and only one of two simultaneous approvals winning;
 - an overlapping booking refused, with suggestions offered;
 - back-to-back bookings allowed;
 - **two concurrent bookings for the same slot: exactly one wins**;
