@@ -32,6 +32,9 @@ export function AppShell({
   return (
     <div className="rv-shell">
       <nav className="rv-side" aria-label="Main">
+        {/* The nav fills the card's height so its edge runs the whole way
+            down; this inner column is what sticks while the page scrolls. */}
+        <div className="rv-side-inner">
         <div className="rv-side-brand">
           <Link href="/dashboard" style={{ display: "inline-flex", textDecoration: "none", color: "inherit" }} aria-label="Reservo home">
             <Logo size={32} />
@@ -69,6 +72,7 @@ export function AppShell({
               <span className="rv-side-rail-label">Sign out</span>
             </button>
           </form>
+        </div>
         </div>
       </nav>
 

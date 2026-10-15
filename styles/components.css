@@ -204,7 +204,13 @@ textarea.rv-input { height: auto; min-height: 88px; padding: var(--space-2) var(
 .rv-stat-delta.down { color: var(--danger); }
 
 /* Sidebar nav */
-.rv-side { width: var(--sidebar-width); background: var(--surface); border-right: 1px solid var(--border); padding: var(--space-4) var(--space-3); display: flex; flex-direction: column; gap: var(--space-1); min-height: 100%; }
+/*
+ * The nav itself is only the column's chrome — width, ground and the edge
+ * against the content — and it stretches to the card so that edge runs the
+ * whole way down. Everything that scrolls or sticks is on .rv-side-inner.
+ */
+.rv-side { width: var(--sidebar-width); background: var(--surface); border-right: 1px solid var(--border); }
+.rv-side-inner { padding: var(--space-4) var(--space-3); display: flex; flex-direction: column; gap: var(--space-1); }
 .rv-side-brand { display: flex; align-items: center; padding: var(--space-1) var(--space-2) var(--space-5); }
 .rv-mark { width: 30px; height: 30px; border-radius: 9px; background: var(--primary); display: grid; place-items: center; color: var(--on-primary); }
 .rv-side-section { font: 600 11px/16px var(--font-sans); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-muted); padding: var(--space-4) var(--space-3) var(--space-2); }

@@ -144,7 +144,24 @@ main { background: var(--surface); flex: 1 1 auto; }
 }
 
 /* Sidebar: the active item is decided by the router, not by markup */
-.rv-side { position: sticky; top: 0; align-self: flex-start; max-height: 100vh; overflow-y: auto; flex: none; }
+/*
+ * `align-self: flex-start` here left the nav as tall as its own items, so on
+ * a short page its ground and edge stopped partway down the card and the
+ * column did not line up with the content beside it. A flex item stretches by
+ * default, which is what the chrome wants.
+ *
+ * Sticky then moves inside. The column is given the card's own minimum height
+ * so the sign-out block still lands at the bottom, and capped at the viewport
+ * so there is somewhere for it to stick to on a long page.
+ */
+.rv-side { flex: none; }
+.rv-side-inner {
+  position: sticky;
+  top: 0;
+  min-height: calc(100vh - var(--space-6) * 2);
+  max-height: 100vh;
+  overflow-y: auto;
+}
 .rv-side-rail-label { display: inline; }
 
 /* Bottom tab bar, phones only */
@@ -322,7 +339,8 @@ main { background: var(--surface); flex: 1 1 auto; }
 }
 
 @media (max-width: 1200px) {
-  .rv-side { width: 72px; padding: var(--space-4) var(--space-2); }
+  .rv-side { width: 72px; }
+  .rv-side-inner { padding: var(--space-4) var(--space-2); }
   .rv-side-section { display: none; }
   .rv-side .rv-nav { justify-content: center; padding: 10px 0; position: relative; }
   .rv-side-rail-label { display: none; }
