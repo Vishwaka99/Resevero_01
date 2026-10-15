@@ -36,7 +36,6 @@ export function SignInForm({ redirectTo }: { redirectTo?: string }) {
         label="Password"
         name="password"
         type="password"
-        placeholder="••••••••"
         autoComplete="current-password"
         required
         error={state.errors?.password}

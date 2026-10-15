@@ -57,7 +57,6 @@ export function SignUpForm() {
       <PasswordField
         label="Password"
         name="password"
-        placeholder="••••••••"
         autoComplete="new-password"
         required
         minLength={8}
@@ -68,7 +67,6 @@ export function SignUpForm() {
       <PasswordField
         label="Confirm password"
         name="confirmPassword"
-        placeholder="••••••••"
         autoComplete="new-password"
         required
         minLength={8}
