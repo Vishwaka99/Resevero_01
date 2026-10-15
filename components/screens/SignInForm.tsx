@@ -6,7 +6,7 @@ import { Alert, Button, Checkbox, Field } from "@/components/ui";
 import { signInAction } from "@/lib/bff/actions";
 import { IDLE } from "@/lib/bff/action-state";
 
-export function SignInForm({ redirectTo, demoPassword }: { redirectTo?: string; demoPassword: string }) {
+export function SignInForm({ redirectTo }: { redirectTo?: string }) {
   const [state, submit, pending] = useActionState(signInAction, IDLE);
 
   return (
@@ -30,7 +30,6 @@ export function SignInForm({ redirectTo, demoPassword }: { redirectTo?: string; 
         autoComplete="email"
         required
         maxLength={160}
-        defaultValue="admin@reservo.test"
         error={state.errors?.email}
       />
       <Field
@@ -40,7 +39,6 @@ export function SignInForm({ redirectTo, demoPassword }: { redirectTo?: string; 
         placeholder="••••••••"
         autoComplete="current-password"
         required
-        defaultValue={demoPassword}
         error={state.errors?.password}
       />
 
@@ -56,10 +54,6 @@ export function SignInForm({ redirectTo, demoPassword }: { redirectTo?: string; 
         No account? <a href="/sign-up" style={{ color: "var(--primary)", fontWeight: 600 }}>Create one</a>
       </p>
 
-      <div style={{ padding: "12px 14px", borderRadius: 10, background: "var(--surface-sunken)", fontSize: 13, color: "var(--ink-muted)" }}>
-        Demo accounts: <b style={{ color: "var(--ink)" }}>admin@reservo.test</b> (admin) and <b style={{ color: "var(--ink)" }}>member@reservo.test</b> (member).
-        Password <b style={{ color: "var(--ink)" }}>{demoPassword}</b> for both.
-      </div>
     </form>
   );
 }

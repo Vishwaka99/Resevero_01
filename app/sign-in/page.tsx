@@ -4,7 +4,6 @@ import { redirect } from "next/navigation";
 import { AuthAside, AuthLayout } from "@/components/screens/AuthAside";
 import { SignInForm } from "@/components/screens/SignInForm";
 import { getSession } from "@/lib/auth/session";
-import { DEV_PASSWORD } from "@/lib/data/memory/seed";
 
 export const metadata: Metadata = { title: "Sign in" };
 export const dynamic = "force-dynamic";
@@ -21,7 +20,7 @@ export default async function SignInPage({ searchParams }: { searchParams: Promi
         </AuthAside>
       }
     >
-      <SignInForm redirectTo={next} demoPassword={DEV_PASSWORD} />
+      <SignInForm redirectTo={next} />
     </AuthLayout>
   );
 }
