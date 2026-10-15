@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { cache } from "react";
 
 import { getDataStore } from "@/lib/data";
 import type { Role, User } from "@/lib/domain/types";
@@ -68,16 +69,47 @@ async function profileFor(authUserId: string, email: string | null | undefined):
   return byEmail;
 }
 
-/** The signed-in user, or null. Safe to call from any server component. */
-export async function getSession(): Promise<AuthUser | null> {
-  // getUser() revalidates the access token with Supabase rather than trusting
-  // the cookie, which is the point: a cookie is whatever the client sent.
-  const { data, error } = await (await client()).auth.getUser();
-  if (error || !data.user) return null;
+/**
+ * Resolving the signed-in user, once per request.
+ *
+ * Two things made this slow. It ran on every call — the app layout, the page,
+ * and the admin layout on top of that — and each run asked Supabase over the
+ * network. Three round trips, one after another, before a page could start
+ * rendering.
+ *
+ * `cache` collapses them into one for the request. And the check itself is
+ * now local: `getClaims` verifies the token's signature against the project's
+ * public keys, which the client fetches once and keeps, instead of asking the
+ * auth server who this is.
+ *
+ * What that gives up is worth stating exactly. `getUser` asks Supabase, so a
+ * session revoked mid-flight is refused at once; a signature check trusts the
+ * token until it expires. The proxy still calls `getUser`, so a revoked
+ * session is caught on the next page navigation — but its matcher does not
+ * cover `/api/bff`, so a BFF call in between is verified locally and would
+ * go through until the access token runs out.
+ *
+ * What does *not* lag is authority: role and active state are read from the
+ * database on every request, below, so demoting or deactivating someone takes
+ * effect on their very next call, API routes included. It is only the
+ * session's own revocation that waits.
+ *
+ * One caveat that comes with caching: a session changed *during* a request —
+ * signing in or out — is not reflected by a later call in that same request.
+ * Both of those redirect immediately, so nothing reads a stale answer.
+ */
+const resolveSession = cache(async (): Promise<AuthUser | null> => {
+  const { data, error } = await (await client()).auth.getClaims();
+  if (error || !data?.claims) return null;
 
-  const profile = await profileFor(data.user.id, data.user.email);
+  const profile = await profileFor(data.claims.sub, data.claims.email);
   if (!profile || !profile.isActive) return null;
   return toAuthUser(profile);
+});
+
+/** The signed-in user, or null. Safe to call from any server component. */
+export async function getSession(): Promise<AuthUser | null> {
+  return resolveSession();
 }
 
 export async function requireUser(): Promise<AuthUser> {
