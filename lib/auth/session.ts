@@ -47,10 +47,39 @@ async function profileFor(authUserId: string, email: string | null | undefined):
   return byEmail;
 }
 
+/**
+ * A token the auth server no longer holds fails every time it is presented, so
+ * it has to be thrown away rather than retried. The proxy does that for the
+ * routes it matches; the pair below covers the rest, which is the BFF.
+ */
+function tokenIsSpent(error: { status?: number } | null): boolean {
+  // No error and no claims means the cookie did not even parse, so there is
+  // nothing in it worth keeping. A 4xx is the auth server refusing it. Anything
+  // else is transport, and the token may well be fine — signing someone out
+  // over a blip is the worse failure.
+  if (!error) return true;
+  return typeof error.status === "number" && error.status >= 400 && error.status < 500;
+}
+
+/** Drops the auth cookies where that is possible: a route handler can write them, a server component cannot, and those requests are the proxy's. */
+async function discardStaleAuth(): Promise<void> {
+  try {
+    const store = await cookies();
+    for (const { name } of store.getAll()) {
+      if (name.startsWith("sb-") && name.includes("-auth-token")) store.delete(name);
+    }
+  } catch {
+    // Read-only cookies, in a server component.
+  }
+}
+
 /** Resolves the signed-in user once per request, verifying the token locally rather than asking Supabase. */
 const resolveSession = cache(async (): Promise<AuthUser | null> => {
   const { data, error } = await (await client()).auth.getClaims();
-  if (error || !data?.claims) return null;
+  if (error || !data?.claims) {
+    if (tokenIsSpent(error)) await discardStaleAuth();
+    return null;
+  }
 
   const profile = await profileFor(data.claims.sub, data.claims.email);
   if (!profile || !profile.isActive) return null;
