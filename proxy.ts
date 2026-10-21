@@ -8,7 +8,19 @@ export async function proxy(request: NextRequest) {
   const toSignIn = () => {
     const signIn = new URL("/sign-in", request.url);
     if (pathname !== "/" && pathname !== "/dashboard") signIn.searchParams.set("next", `${pathname}${search}`);
-    return NextResponse.redirect(signIn);
+
+    // A refresh that fails leaves the stale token in the browser, so every
+    // later request repeats it and Supabase answers 400 again. Dropping the
+    // auth cookies on the way out means the next request arrives cleanly
+    // signed out. The names are matched on their shape rather than spelled
+    // out, because a large session is chunked across `.0`, `.1`, and so on.
+    const redirect = NextResponse.redirect(signIn);
+    for (const { name } of request.cookies.getAll()) {
+      if (name.startsWith("sb-") && name.includes("-auth-token")) {
+        redirect.cookies.set({ name, value: "", path: "/", maxAge: 0 });
+      }
+    }
+    return redirect;
   };
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
